@@ -164,15 +164,11 @@ func IterCraw(surl string, wum map[string]int, fum map[string]int){
 	fum[surl] = StatusCode
 
 	if ContentType == "text/html; charset=utf-8"{
-		//hrefArray, srcArray := ExtractBody(respBody)
-	}else {
-		//hrefArray, srcArray := make([][]string, 0, 0), make([][]string, 0, 0)
+		hrefArray, srcArray := ExtractBody(respBody)
+
+		SaToMap(srcArray, wum)
+		HaToMap(hrefArray, wum)
 	}
-
-	SaToMap(srcArray, wum)
-
-	HaToMap(hrefArray, wum)
-
 }
 
 func SaToMap(sa [][]string,  wum map[string]int)  {
