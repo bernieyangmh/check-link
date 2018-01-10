@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"errors"
+	"fmt"
 )
 
 const (
@@ -24,13 +25,18 @@ func main() {
 	var ROOT_DOMAIN = [1]string{"http://www.qiniu.com"}
 
 	var executeChannel = make(chan string, 2000)
-	//var trailMap = make(map[string]int)
-
+	var trailMap = make(map[string]int)
 
 	//将根域名放入channel
 	PutChannel(ROOT_DOMAIN[0], executeChannel)
-	rooturl := GetChannel(executeChannel)
-	log.Print(rooturl)
+
+	for aimUrl := range executeChannel{
+		IterCraw(aimUrl, trailMap, executeChannel)
+	}
+
+	for k,v := range trailMap{
+		fmt.Println(k,v)
+	}
 
 }
 
@@ -92,8 +98,8 @@ func ReHaveSlash(s string) bool {
 
 
 
-//输入一个链接，将能爬取的链接输进管道和map
-func IterCraw(surl string, wum map[string]int, tM map[string]int, ch chan<- string) {
+//输入一个链接，将状态码放进map，能爬取的链接输进管道
+func IterCraw(surl string, tM map[string]int, ch chan<- string) {
 
 	s_domain, _, err := GetDomainHost(surl)
 	if err != nil {
