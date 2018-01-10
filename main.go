@@ -1,16 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"net/url"
-	"io/ioutil"
 	"log"
-	"net/http"
-
+	"bytes"
 	"regexp"
-	"github.com/Workiva/go-datastructures/queue"
-	"time"
+	"net/http"
+	"io/ioutil"
+	"net/url"
+	"errors"
 )
 
 const (
@@ -23,112 +20,33 @@ const (
 
 func main() {
 
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+	var ROOT_DOMAIN = [1]string{"http://www.qiniu.com"}
 
-	ROOT_DOMAIN := `http://www.qiniu.com`
-	waitUrlMap := make(map[string]int)
-	finishUrlMap := make(map[string]int)
-
-	waitQueue := queue.New(2000)
-
-	waitQueue.Put(ROOT_DOMAIN)
-
-	//todo 从queue里开始
-	//respBody, StatusCode, ContentType := Crawling(ROOT_DOMAIN)
-	//
-	//finishUrlMap[ROOT_DOMAIN] = StatusCode
-	//waitUrlMap[ROOT_DOMAIN] = -1
-
-	//if ContentType != "text/html; charset=utf-8" {
-	//
-	//}
-	//
-	//hrefArray, srcArray := ExtractBody(respBody)
-	//
-	//SaToMapQueue(ROOT_DOMAIN, srcArray, waitUrlMap, *waitQueue)
-	//
-	//HaToMapQueue(ROOT_DOMAIN, hrefArray, waitUrlMap, *waitQueue)
-
-	tmpUrl, err := GetUrlFromQueue(*waitQueue)
-	if err != nil {
-		if err ==queue.ErrTimeout {
-			log.Println( "队列读取完毕", err)
-		} else {
-			log.Println(err)
-		}
-	}
+	var executeChannel = make(chan string, 2000)
+	//var trailMap = make(map[string]int)
 
 
+	//将根域名放入channel
+	PutChannel(ROOT_DOMAIN[0], executeChannel)
+	rooturl := GetChannel(executeChannel)
+	log.Print(rooturl)
 
+}
 
-	IterCraw(tmpUrl, waitUrlMap, finishUrlMap, *waitQueue)
+//将url放入管道
+func PutChannel(u string, ch chan<- string)  {
+	ch <- u
+}
 
-	for k, v := range waitUrlMap {
-		fmt.Println(k, v)
-	}
-	fmt.Println(len(waitUrlMap))
-
-	for k, v := range finishUrlMap {
-		fmt.Println(k, v)
-	}
-	fmt.Println(len(finishUrlMap))
-
+//从管道中取出一个url
+func GetChannel(ch <-chan string)  string {
+	url := <- ch
+	return url
 }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//拼接域名和路径
-func StitchUrl(DomainString string, PathString string) (UString string) {
-	var resUrlBuffer bytes.Buffer
-
-	resUrlBuffer.WriteString(DomainString)
-	resUrlBuffer.WriteString(PathString)
-
-	UString = resUrlBuffer.String()
-
-	return UString
-}
-
-//爬取指定链接，返回响应
-func Crawling(UrlString string) (ResponseBodyString string, StatusCode int, ContentType string) {
-	resp, err := http.Get(UrlString)
-	if err != nil {
-		log.Print(err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return string(body), resp.StatusCode, resp.Header.Get("Content-Type")
-}
 
 //返回匹配href=的相对路径数组
 func ReHrefSubMatch(s string) [][]string {
@@ -168,96 +86,124 @@ func ReHaveSlash(s string) bool {
 
 }
 
-//从响应body里提取出hre=和src=的相对路径
+
+
+
+
+
+
+//输入一个链接，将能爬取的链接输进管道和map
+func IterCraw(surl string, wum map[string]int, tM map[string]int, ch chan<- string) {
+
+	s_domain, _, err := GetDomainHost(surl)
+	if err != nil {
+		log.Println(err)
+	}
+
+	respBody, StatusCode, ContentType := Crawling(surl)
+
+	//爬过的链接放入trailMap
+	tM[surl] = StatusCode
+
+	//如果链接的Content-Type为html，进入读取
+	if ContentType == "text/html; charset=utf-8" {
+		hrefArray, srcArray := ExtractBody(respBody)
+
+		for i := 0; i < len(hrefArray); i++ {
+			ha := hrefArray[i][1]
+			unitUrl := StitchUrl(ha, s_domain)
+			tM[unitUrl] = -1
+			PutChannel(unitUrl, ch)
+		}
+
+		for i := 0; i < len(srcArray); i++ {
+			sa := srcArray[i][1]
+			unitUrl := StitchUrl(sa, s_domain)
+			tM[unitUrl] = -1
+			PutChannel(unitUrl, ch)
+		}
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+//从body里拿到href和src的相对路径
 func ExtractBody(s string) ([][]string, [][]string) {
 	hrefArray := ReHrefSubMatch(s)
 	srcArray := ReSrcSubMatch(s)
 	return hrefArray, srcArray
 }
 
-//从指定链接内爬取链接，放入waitUrlMap, waitUrlQueue
-func IterCraw(surl string, wum map[string]int, fum map[string]int, wQ queue.Queue) {
-	respBody, StatusCode, ContentType := Crawling(surl)
-
-	fum[surl] = StatusCode
-
-	if ContentType == "text/html; charset=utf-8" {
-		hrefArray, srcArray := ExtractBody(respBody)
-
-		host := ParseUrlHost(surl)
-
-		SaToMapQueue(host,srcArray, wum, wQ)
-		HaToMapQueue(host, hrefArray, wum, wQ)
-	}
-}
-
-//处理SreArry内的链接写入到waitUrlMap,waitUrlQueue
-func SaToMapQueue(d string, sa [][]string, wum map[string]int, wQ queue.Queue) {
-	for i := 0; i < len(sa); i++ {
-		srcOriginLink := sa[i][1]
-
-		if ReHaveSlash(srcOriginLink) != true {
-			continue
-		}
-
-		if ReIsHttp(srcOriginLink) != true {
-
-			resLink := StitchUrl(d, srcOriginLink)
-
-			res := ReIsLink(resLink)
-			if res == true {
-
-				wum[resLink] = -1
-				wQ.Put(resLink)
-
-			}
-		}
-	}
-
-}
-
-//处理HrefArry内的链接写入到waitUrlMap,waitUrlQueue
-func HaToMapQueue(d string, ha [][]string, wum map[string]int, wQ queue.Queue) {
-	for i := 0; i < len(ha); i++ {
-
-		hrefOriginLink := ha[i][1]
-
-		if ReHaveSlash(hrefOriginLink) != true {
-			continue
-		}
-
-		if ReIsHttp(hrefOriginLink) != true {
-
-			resLink := StitchUrl(d, hrefOriginLink)
-			res := ReIsLink(resLink)
-
-			if res == true {
-
-				wum[resLink] = -1
-				wQ.Put(resLink)
-
-			}
-		}
-	}
-}
-
-func ParseUrlHost(u string) string{
-	//解析这个 URL 并确保解析没有出错。
-	pU, err := url.Parse(u)
+//获取链接的body，状态码，contentType
+func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
+	resp, err := http.Get(surl)
 	if err != nil {
-		panic(err)
-	}
-	return pU.Host
-
-}
-
-func GetUrlFromQueue(wq queue.Queue) (turl string,err error) {
-	tmpUrlArray, err := wq.Poll(1, time.Millisecond)
-	if (err != nil) || err == queue.ErrTimeout {
 		log.Print(err)
 	}
 
-	tmpUrl := fmt.Sprintf("%s", tmpUrlArray[0])
-	return tmpUrl, err
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+
+	respstatusCode := resp.StatusCode
+	respContentType :=  resp.Header.Get("Content-Type")
+	respBody := string(body)
+
+
+	defer resp.Body.Close()
+
+	return respBody, respstatusCode, respContentType
+}
+
+//拼接domain和path
+func StitchUrl(DomainString string, PathString string) (UString string) {
+	var resUrlBuffer bytes.Buffer
+
+	resUrlBuffer.WriteString(DomainString)
+	resUrlBuffer.WriteString(PathString)
+
+	UString = resUrlBuffer.String()
+
+	return UString
+}
+
+//将Scheme和Host拼接为domain
+func StitchDomain(s string, h string) string {
+	var resUrlBuffer bytes.Buffer
+
+	resUrlBuffer.WriteString(s)
+	resUrlBuffer.WriteString("://")
+	resUrlBuffer.WriteString(h)
+
+	domainString := resUrlBuffer.String()
+
+	return domainString
+
+}
+
+
+//从链接里提取出domain,host
+func GetDomainHost(u string) (string, string, error) {
+
+	if !ReIsLink(u){
+		return "", "", errors.New("不符合链接正则")
+	}
+
+	pu, err := url.Parse(u)
+	if err != nil {
+		log.Println(err)
+	}
+
+	domainString := StitchDomain(pu.Scheme, pu.Host)
+	return domainString, pu.Host, nil
 
 }
