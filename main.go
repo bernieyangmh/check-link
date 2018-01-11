@@ -1,14 +1,14 @@
 package main
 
 import (
-	"log"
 	"bytes"
-	"regexp"
-	"net/http"
-	"io/ioutil"
-	"net/url"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"regexp"
 )
 
 const (
@@ -30,29 +30,53 @@ func main() {
 	//将根域名放入channel
 	PutChannel(ROOT_DOMAIN[0], executeChannel)
 
-	for aimUrl := range executeChannel{
+	for aimUrl := range executeChannel {
 		IterCraw(aimUrl, trailMap, executeChannel)
 	}
 
-	for k,v := range trailMap{
-		fmt.Println(k,v)
+	for k, v := range trailMap {
+		fmt.Println(k, v)
 	}
 
 }
 
+//输入一个链接，将状态码放进map，能爬取的链接输进管道
+func IterCraw(surl string, tM map[string]int, cH chan<- string) {
+
+	s_domain, _, err := GetDomainHost(surl)
+	if err != nil {
+		log.Println(err)
+	}
+
+	respBody, StatusCode, ContentType := Crawling(surl)
+
+	//爬过的链接放入trailMap
+	if tM[surl] == 0 {
+		tM[surl] = StatusCode
+
+	}
+
+	//如果链接的Content-Type为html，进入读取且不在trailMap内
+	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) {
+		log.Println("aimUrl		" + surl)
+
+		hrefArray, srcArray := ExtractBody(respBody)
+
+		ArrayToUrl(s_domain, hrefArray, cH, tM)
+		ArrayToUrl(s_domain, srcArray, cH, tM)
+	}
+}
+
 //将url放入管道
-func PutChannel(u string, ch chan<- string)  {
+func PutChannel(u string, ch chan<- string) {
 	ch <- u
 }
 
 //从管道中取出一个url
-func GetChannel(ch <-chan string)  string {
-	url := <- ch
+func GetChannel(ch <-chan string) string {
+	url := <-ch
 	return url
 }
-
-
-
 
 //返回匹配href=的相对路径数组
 func ReHrefSubMatch(s string) [][]string {
@@ -67,6 +91,14 @@ func ReHrefSubMatch(s string) [][]string {
 func ReSrcSubMatch(s string) [][]string {
 	reHref, _ := regexp.Compile(PATTERN_SRC)
 	srcArray := reHref.FindAllStringSubmatch(s, 10000)
+
+	return srcArray
+
+}
+
+func ReLinkSubMatch(s string) [][]string {
+	reLink, _ := regexp.Compile(PATTERN_LINK)
+	srcArray := reLink.FindAllStringSubmatch(s, 10000)
 
 	return srcArray
 
@@ -92,54 +124,33 @@ func ReHaveSlash(s string) bool {
 
 }
 
+//读取数组内的路径，处理为完整url,如果不在Map里放入ch和map
+func ArrayToUrl(d string, a [][]string, cH chan<- string, tM map[string]int) {
+	var unitUrl string
+	for i := 0; i < len(a); i++ {
+		ha := a[i][1]
 
-
-
-
-
-
-//输入一个链接，将状态码放进map，能爬取的链接输进管道
-func IterCraw(surl string, tM map[string]int, ch chan<- string) {
-
-	s_domain, _, err := GetDomainHost(surl)
-	if err != nil {
-		log.Println(err)
-	}
-
-	respBody, StatusCode, ContentType := Crawling(surl)
-
-	//爬过的链接放入trailMap
-	tM[surl] = StatusCode
-
-	//如果链接的Content-Type为html，进入读取
-	if ContentType == "text/html; charset=utf-8" {
-		hrefArray, srcArray := ExtractBody(respBody)
-
-		for i := 0; i < len(hrefArray); i++ {
-			ha := hrefArray[i][1]
-			unitUrl := StitchUrl(ha, s_domain)
-			tM[unitUrl] = -1
-			PutChannel(unitUrl, ch)
+		//引用为路径则拼接为完整url
+		if !ReIsLink(ha) && ReHaveSlash(ha) {
+			unitUrl = StitchUrl(d, ha)
+			//如果拼接符合url正则且不在Map内的的放入channel和Map
+			if ReIsLink(unitUrl) && tM[unitUrl] == 0{
+				UrlToChMAP(unitUrl, cH, tM)
+			}else {
+				unitUrl = ha
+				log.Println("ErrorUrl		"+unitUrl)
+			}
 		}
-
-		for i := 0; i < len(srcArray); i++ {
-			sa := srcArray[i][1]
-			unitUrl := StitchUrl(sa, s_domain)
-			tM[unitUrl] = -1
-			PutChannel(unitUrl, ch)
-		}
-
 	}
 }
 
+//将连接放入channel和map
+func UrlToChMAP(d string, ch chan<- string, tm map[string]int) {
+	tm[d] = -1
+	log.Println("put			" + d)
+	PutChannel(d, ch)
 
-
-
-
-
-
-
-
+}
 
 //从body里拿到href和src的相对路径
 func ExtractBody(s string) ([][]string, [][]string) {
@@ -161,9 +172,8 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	}
 
 	respstatusCode := resp.StatusCode
-	respContentType :=  resp.Header.Get("Content-Type")
+	respContentType := resp.Header.Get("Content-Type")
 	respBody := string(body)
-
 
 	defer resp.Body.Close()
 
@@ -196,11 +206,10 @@ func StitchDomain(s string, h string) string {
 
 }
 
-
 //从链接里提取出domain,host
 func GetDomainHost(u string) (string, string, error) {
 
-	if !ReIsLink(u){
+	if !ReIsLink(u) {
 		return "", "", errors.New("不符合链接正则")
 	}
 
