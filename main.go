@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 )
 
 const (
@@ -30,9 +31,18 @@ func main() {
 	//将根域名放入channel
 	PutChannel(ROOT_DOMAIN[0], executeChannel)
 
-	for aimUrl := range executeChannel {
-		IterCraw(aimUrl, trailMap, executeChannel)
+	//for aimUrl := range executeChannel {
+	//	IterCraw(aimUrl, trailMap, executeChannel)
+	//}
+
+	for len(executeChannel) > 0 {
+		aimUrl := GetChannel(executeChannel)
+		if aimUrl != "close" {
+			IterCraw(aimUrl, trailMap, executeChannel)
+		}
 	}
+
+
 
 	for k, v := range trailMap {
 		fmt.Println(k, v)
@@ -41,6 +51,7 @@ func main() {
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
+// Todo 可迭代，可根据根域名判断是否需要爬取
 func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 
 	s_domain, _, err := GetDomainHost(surl)
@@ -48,6 +59,7 @@ func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 		log.Println(err)
 	}
 
+	log.Println("craw		" + surl)
 	respBody, StatusCode, ContentType := Crawling(surl)
 
 	//爬过的链接放入trailMap
@@ -56,7 +68,7 @@ func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 
 	}
 
-	//如果链接的Content-Type为html，进入读取且不在trailMap内
+	//如果链接根域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) {
 		log.Println("aimUrl		" + surl)
 
@@ -73,9 +85,17 @@ func PutChannel(u string, ch chan<- string) {
 }
 
 //从管道中取出一个url
-func GetChannel(ch <-chan string) string {
+func GetChannel(ch chan string) string {
 	url := <-ch
 	return url
+
+	select {
+	case u := <-ch:
+		return u
+	case <-time.After(time.Second * 10):
+		close(ch)
+		return "close"
+	}
 }
 
 //返回匹配href=的相对路径数组
