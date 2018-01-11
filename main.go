@@ -18,6 +18,7 @@ const (
 	PATTERN_HTTP  = `http(.*?)`
 	PATTERN_LINK  = `https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
 	PATTERN_SLASH = `\/(.*?)`
+	ALLOW_DOMAIN = `(qiniu.com)|(qiniu.com.cn)`
 )
 
 func main() {
@@ -68,8 +69,8 @@ func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 
 	}
 
-	//如果链接根域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
-	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) {
+	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
+	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) && ReDomainMatch(surl){
 		log.Println("aimUrl		" + surl)
 
 		hrefArray, srcArray := ExtractBody(respBody)
@@ -96,6 +97,15 @@ func GetChannel(ch chan string) string {
 		close(ch)
 		return "close"
 	}
+}
+
+//返回匹配href=的相对路径数组
+func ReDomainMatch(s string) bool {
+	reDomain, _ := regexp.Compile(ALLOW_DOMAIN)
+	isAllow := reDomain.MatchString(s)
+
+	return isAllow
+
 }
 
 //返回匹配href=的相对路径数组
