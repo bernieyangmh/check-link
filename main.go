@@ -15,7 +15,7 @@ const (
 	PATTERN_SRC   = `src=\"(.*?)\"`
 	PATTERN_HERF  = `href=\"(.*?)\"`
 	PATTERN_HTTP  = `http(.*?)`
-	PATTERN_LINK  = `https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
+	PATTERN_LINK  = `https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
 	PATTERN_SLASH = `\/(.*?)`
 )
 
