@@ -40,7 +40,7 @@ func main() {
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl != "close" {
-			IterCraw(aimUrl, trailMap, executeChannel)
+			IterCrawl(aimUrl, trailMap, executeChannel)
 		}
 	}
 
@@ -53,15 +53,14 @@ func main() {
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
-// Todo 可迭代
-func IterCraw(surl string, tM map[string]int, cH chan<- string) {
+func IterCrawl(surl string, tM map[string]int, cH chan<- string) {
 
 	s_domain, _, err := GetDomainHost(surl)
 	if err != nil {
 		log.Println(err)
 	}
 
-	log.Println("craw		" + surl)
+	log.Println("Crawl		" + surl)
 	respBody, StatusCode, ContentType := Crawling(surl)
 
 	//爬过的链接放入trailMap
