@@ -24,13 +24,14 @@ const (
 func main() {
 
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	var ROOT_DOMAIN = [1]string{"http://www.qiniu.com"}
+	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
 
 	var executeChannel = make(chan string, 2000)
 	var trailMap = make(map[string]int)
 
 	//将根域名放入channel
 	PutChannel(ROOT_DOMAIN[0], executeChannel)
+	PutChannel(ROOT_DOMAIN[1], executeChannel)
 
 	//for aimUrl := range executeChannel {
 	//	IterCraw(aimUrl, trailMap, executeChannel)
