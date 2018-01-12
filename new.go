@@ -1,4 +1,4 @@
-package ds
+package main
 
 import (
 	"bytes"
@@ -35,12 +35,15 @@ func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
 
-	var executeChannel = make(chan string, 2000)
+	var executeChannel = make(chan CUrl, 2000)
 	var trailMap = make(map[string]int)
+	var finishArray = make([]CUrl, 3000)
 
+	firCrawl := CUrl{CrawlUrl:ROOT_DOMAIN[0]}
+	secCrawl := CUrl{CrawlUrl:ROOT_DOMAIN[0]}
 	//将根域名放入channel
-	PutChannel(ROOT_DOMAIN[0], executeChannel)
-	PutChannel(ROOT_DOMAIN[1], executeChannel)
+	PutChannel(firCrawl, executeChannel)
+	PutChannel(secCrawl, executeChannel)
 
 	//for aimUrl := range executeChannel {
 	//	IterCraw(aimUrl, trailMap, executeChannel)
@@ -48,8 +51,8 @@ func main() {
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
-		if aimUrl != "close" {
-			IterCrawl(aimUrl, trailMap, executeChannel)
+		if aimUrl.CrawlUrl != "close" {
+			IterCrawl(aimUrl, trailMap, executeChannel, finishArray)
 		}
 	}
 
@@ -62,48 +65,53 @@ func main() {
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
-func IterCrawl(surl string, tM map[string]int, cH chan<- string) {
+func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA []CUrl) {
 
-	s_domain, _, err := GetDomainHost(surl)
+
+	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
 	}
 
-	log.Println("Crawl		" + surl)
-	respBody, StatusCode, ContentType := Crawling(surl)
+	log.Println("Crawl		" + cu.CrawlUrl)
+	respBody, StatusCode, ContentType := Crawling(cu.CrawlUrl)
 
 	//爬过的链接放入trailMap
-	tM[surl] = StatusCode
+	tM[cu.CrawlUrl] = StatusCode
+
+	cu.StatusCode = StatusCode
+	cu.ContentType = ContentType
+	cu.Domain = s_domain
+
+	fA = append(fA, cu)
 
 
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
-	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) && ReDomainMatch(surl){
-		log.Println("aimUrl		" + surl)
+	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl){
+		log.Println("aimUrl		" + cu.CrawlUrl)
 
 		hrefArray, srcArray := ExtractBody(respBody)
 
-		ArrayToUrl(s_domain, hrefArray, cH, tM)
-		ArrayToUrl(s_domain, srcArray, cH, tM)
+		ArrayToUrl(cu, hrefArray, cH, tM)
+		ArrayToUrl(cu, srcArray, cH, tM)
 	}
 }
 
 //将url放入管道
-func PutChannel(u string, ch chan<- string) {
-	ch <- u
+func PutChannel(cu CUrl, ch chan<- CUrl) {
+	ch <- cu
 }
 
 //从管道中取出一个url
-func GetChannel(ch chan string) string {
-	url := <-ch
-	return url
+func GetChannel(ch chan CUrl) CUrl {
 
 	select {
 	case u := <-ch:
 		return u
 	case <-time.After(time.Second * 10):
 		close(ch)
-		return "close"
+		return CUrl{CrawlUrl:"close"}
 	}
 }
 
@@ -162,20 +170,22 @@ func ReHaveSlash(s string) bool {
 }
 
 //读取数组内的路径，处理为完整url,如果不在Map里放入ch和map
-func ArrayToUrl(d string, a [][]string, cH chan<- string, tM map[string]int) {
-	var unitUrl string
+func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
+	var unitCurl CUrl
 	for i := 0; i < len(a); i++ {
 		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
 		if ReHaveSlash(ha) {
-			unitUrl = StitchUrl(d, ha)
+			unitCurl.Origin = ha
+			unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+			unitCurl.RefUrl = cU.CrawlUrl
 			//如果拼接符合url正则且不在Map内的的放入channel和Map todo "http://url/a.jpg"
-			if ReIsLink(unitUrl) && tM[unitUrl] == 0{
-				UrlToChMAP(unitUrl, cH, tM)
+			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0{
+				UrlToChMAP(unitCurl, cH, tM)
 			}else {
-				unitUrl = ha
-				log.Println("ErrorUrl		"+unitUrl)
+				unitCurl.Origin = ha
+				log.Println("ErrorUrl		"+unitCurl.CrawlUrl)
 			}
 		} else {
 			log.Print("ErrorPath			" + ha)
@@ -184,10 +194,10 @@ func ArrayToUrl(d string, a [][]string, cH chan<- string, tM map[string]int) {
 }
 
 //将连接放入channel和map
-func UrlToChMAP(d string, ch chan<- string, tm map[string]int) {
-	tm[d] = -1
-	log.Println("put			" + d)
-	PutChannel(d, ch)
+func UrlToChMAP(cu CUrl, ch chan<- CUrl, tm map[string]int) {
+	tm[cu.CrawlUrl] = -1
+	log.Println("put			" + cu.CrawlUrl)
+	PutChannel(cu, ch)
 
 }
 
