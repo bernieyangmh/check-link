@@ -65,10 +65,9 @@ func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 	respBody, StatusCode, ContentType := Crawling(surl)
 
 	//爬过的链接放入trailMap
-	if tM[surl] == 0 {
-		tM[surl] = StatusCode
+	tM[surl] = StatusCode
 
-	}
+
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[surl] != 0) && ReDomainMatch(surl){
