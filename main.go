@@ -17,7 +17,7 @@ const (
 	PATTERN_HERF  = `href=\"(.*?)\"`
 	PATTERN_HTTP  = `http(.*?)`
 	PATTERN_LINK  = `https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
-	PATTERN_SLASH = `\/(.*?)`
+	PATTERN_SLASH = `^/(.*?)`
 	ALLOW_DOMAIN = `(qiniu.com)|(qiniu.com.cn)`
 )
 
@@ -160,15 +160,17 @@ func ArrayToUrl(d string, a [][]string, cH chan<- string, tM map[string]int) {
 		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
-		if !ReIsLink(ha) && ReHaveSlash(ha) {
+		if ReHaveSlash(ha) {
 			unitUrl = StitchUrl(d, ha)
-			//如果拼接符合url正则且不在Map内的的放入channel和Map
+			//如果拼接符合url正则且不在Map内的的放入channel和Map todo "http://url/a.jpg"
 			if ReIsLink(unitUrl) && tM[unitUrl] == 0{
 				UrlToChMAP(unitUrl, cH, tM)
 			}else {
 				unitUrl = ha
 				log.Println("ErrorUrl		"+unitUrl)
 			}
+		} else {
+			log.Print("ErrorPath			" + ha)
 		}
 	}
 }
