@@ -52,7 +52,7 @@ func main() {
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
-// Todo 可迭代，可根据根域名判断是否需要爬取
+// Todo 可迭代
 func IterCraw(surl string, tM map[string]int, cH chan<- string) {
 
 	s_domain, _, err := GetDomainHost(surl)
@@ -103,7 +103,6 @@ func GetChannel(ch chan string) string {
 func ReDomainMatch(s string) bool {
 	reDomain, _ := regexp.Compile(ALLOW_DOMAIN)
 	isAllow := reDomain.MatchString(s)
-
 	return isAllow
 
 }
