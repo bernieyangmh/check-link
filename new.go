@@ -44,10 +44,7 @@ func main() {
 	//将根域名放入channel
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
-
-	//for aimUrl := range executeChannel {
-	//	IterCraw(aimUrl, trailMap, executeChannel)
-	//}
+	
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
@@ -56,8 +53,11 @@ func main() {
 		}
 	}
 
-	for i := range finishArray {
-		fmt.Println(i)
+	for i :=0; i < len(finishArray); i++ {
+		if finishArray[i].StatusCode != 0 {
+			fmt.Println(finishArray[i])
+
+		}
 	}
 
 }
