@@ -56,10 +56,8 @@ func main() {
 		}
 	}
 
-
-
-	for k, v := range trailMap {
-		fmt.Println(k, v)
+	for i := range finishArray {
+		fmt.Println(i)
 	}
 
 }
