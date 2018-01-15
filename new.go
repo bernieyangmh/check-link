@@ -18,16 +18,16 @@ const (
 	PATTERN_HTTP  = `http(.*?)`
 	PATTERN_LINK  = `https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
 	PATTERN_SLASH = `^/(.*?)`
-	ALLOW_DOMAIN = `(qiniu.com)|(qiniu.com.cn)`
+	ALLOW_DOMAIN  = `(qiniu.com)|(qiniu.com.cn)`
 )
 
 type CUrl struct {
-	CrawlUrl    string      `json:"Url" bson:"url"`
-	StatusCode	int      	`json:"StatusCode" bson:"status_code"`
-	Origin		string      `json:"Origin" bson:"origin"`
-	Domain		string      `json:"Domain" bson:"domain"`
-	RefUrl		string		`json:"RefUrl" bson:"ref_url"`
-	ContentType string		`json:"ContentType" bson:"content_type"`
+	CrawlUrl    string `json:"Url" bson:"url"`
+	StatusCode  int    `json:"StatusCode" bson:"status_code"`
+	Origin      string `json:"Origin" bson:"origin"`
+	Domain      string `json:"Domain" bson:"domain"`
+	RefUrl      string `json:"RefUrl" bson:"ref_url"`
+	ContentType string `json:"ContentType" bson:"content_type"`
 }
 
 func main() {
@@ -38,35 +38,42 @@ func main() {
 	var executeChannel = make(chan CUrl, 2000)
 	var trailMap = make(map[string]int)
 	var finishArray = make([]CUrl, 3000)
+	var errorArryay = make([]CUrl, 500)
 
-	firCrawl := CUrl{CrawlUrl:ROOT_DOMAIN[0]}
-	secCrawl := CUrl{CrawlUrl:ROOT_DOMAIN[0]}
+
+	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
+	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
 	//将根域名放入channel
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
 
-
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
-			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray)
+			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
 		}
 	}
 
-	for i :=0; i < len(finishArray); i++ {
+	for i := 0; i < len(finishArray); i++ {
 		if finishArray[i].StatusCode != 0 {
 			fmt.Println(finishArray[i])
-
 		}
 	}
 
-	fmt.Println(finishArray)
+	log.Println("url num is %d", len(finishArray))
+
+	for i := 0; i < len(errorArryay); i++ {
+		if errorArryay[i].StatusCode != 0 {
+			fmt.Println(errorArryay[i])
+		}
+	}
+
+	log.Println(errorArryay)
 
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
-func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl) {
-
+func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
@@ -84,13 +91,12 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl) {
 	cu.Domain = s_domain
 
 	*fA = append(*fA, cu)
-
-
-
-
+	if cu.StatusCode != 200 {
+		*eA = append(*eA, cu)
+	}
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
-	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl){
+	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
 
 		hrefArray, srcArray := ExtractBody(respBody)
@@ -113,7 +119,7 @@ func GetChannel(ch chan CUrl) CUrl {
 		return u
 	case <-time.After(time.Second * 10):
 		close(ch)
-		return CUrl{CrawlUrl:"close"}
+		return CUrl{CrawlUrl: "close"}
 	}
 }
 
@@ -183,11 +189,11 @@ func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 			unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
 			unitCurl.RefUrl = cU.CrawlUrl
 			//如果拼接符合url正则且不在Map内的的放入channel和Map todo "http://url/a.jpg"
-			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0{
+			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0 {
 				UrlToChMAP(unitCurl, cH, tM)
-			}else {
+			} else {
 				unitCurl.Origin = ha
-				log.Println("ErrorUrl		"+unitCurl.CrawlUrl)
+				log.Println("ErrorUrl		" + unitCurl.CrawlUrl)
 			}
 		} else {
 			log.Print("ErrorPath			" + ha)
