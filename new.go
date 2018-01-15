@@ -44,12 +44,12 @@ func main() {
 	//将根域名放入channel
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
-	
+
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
-			IterCrawl(aimUrl, trailMap, executeChannel, finishArray)
+			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray)
 		}
 	}
 
@@ -60,10 +60,12 @@ func main() {
 		}
 	}
 
+	fmt.Println(finishArray)
+
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
-func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA []CUrl) {
+func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl) {
 
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
@@ -81,7 +83,9 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA []CUrl) {
 	cu.ContentType = ContentType
 	cu.Domain = s_domain
 
-	fA = append(fA, cu)
+	*fA = append(*fA, cu)
+
+
 
 
 
