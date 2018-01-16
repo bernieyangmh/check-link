@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"regexp"
 	"time"
+	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2"
 )
 
 const (
@@ -21,14 +23,56 @@ const (
 	ALLOW_DOMAIN  = `(qiniu.com)|(qiniu.com.cn)`
 )
 
+var (
+	MongoSession, err = mgo.Dial("127.0.0.1")
+	DB                = "worktest"
+	CheckWebsite        = "check_website"
+
+)
+
+func init() {
+	//group coll
+	crawlurlIndex := mgo.Index{
+		Key:        []string{"crawl_url"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true, // See notes.
+		Sparse:     false,
+	}
+	err := MongoSession.DB(DB).C(CheckWebsite).EnsureIndex(crawlurlIndex)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Session() *mgo.Session {
+	return MongoSession.Copy()
+}
+
 type CUrl struct {
-	CrawlUrl    string `json:"Url" bson:"url"`
+	Id           bson.ObjectId `json:"id" bson:"_id"`
+	CrawlUrl    string `json:"CrawlUrl" bson:"crawl_url"`
 	StatusCode  int    `json:"StatusCode" bson:"status_code"`
 	Origin      string `json:"Origin" bson:"origin"`
 	Domain      string `json:"Domain" bson:"domain"`
 	RefUrl      string `json:"RefUrl" bson:"ref_url"`
 	ContentType string `json:"ContentType" bson:"content_type"`
+	updateAt    time.Time     `json:"-" bson:"created_at"`
+	QueryError	string `json:"QueryError" bson:"query_error"`
 }
+
+func (cu *CUrl) Insert () error {
+
+	session := Session()
+	defer session.Close()
+	c := session.DB(DB).C(CheckWebsite)
+	cu.Id = bson.NewObjectId()
+	cu.updateAt = time.Now()
+
+	return c.Insert(cu)
+
+}
+
 
 func main() {
 
@@ -39,7 +83,6 @@ func main() {
 	var trailMap = make(map[string]int)
 	var finishArray = make([]CUrl, 3000)
 	var errorArryay = make([]CUrl, 500)
-
 
 	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
 	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
@@ -60,16 +103,13 @@ func main() {
 		}
 	}
 
-	log.Println("url num is %d", len(finishArray))
+	log.Println("/n url num is %d/n", len(finishArray))
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
 			fmt.Println(errorArryay[i])
 		}
 	}
-
-	log.Println(errorArryay)
-
 }
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -78,6 +118,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
+		cu.QueryError = err.Error()
 	}
 
 	log.Println("Crawl		" + cu.CrawlUrl)
@@ -94,6 +135,12 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	if cu.StatusCode != 200 {
 		*eA = append(*eA, cu)
 	}
+
+	err = cu.Insert()
+	if err != nil{
+		log.Println("Insert		" + err.Error())
+	}
+
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
@@ -184,9 +231,13 @@ func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
-		if ReHaveSlash(ha) {
+		if ReHaveSlash(ha) || ReIsLink(ha) {
 			unitCurl.Origin = ha
-			unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+				if ReHaveSlash(ha) {
+					unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+				}else {
+					unitCurl.CrawlUrl = ha
+				}
 			unitCurl.RefUrl = cU.CrawlUrl
 			//如果拼接符合url正则且不在Map内的的放入channel和Map todo "http://url/a.jpg"
 			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0 {
