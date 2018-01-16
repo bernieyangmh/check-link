@@ -269,19 +269,29 @@ func ExtractBody(s string) ([][]string, [][]string) {
 
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
-	resp, err := http.Get(surl)
+	var respBody string
+
+	resp, err := http.Head(surl)
 	if err != nil {
 		log.Print(err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-	}
-
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
-	respBody := string(body)
+
+	if respContentType == "text/html; charset=utf-8" {
+		resp, err = http.Get(surl)
+		if err != nil {
+			log.Print(err)
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+		}
+		respBody = string(body)
+	}
+
+
 
 	defer resp.Body.Close()
 
