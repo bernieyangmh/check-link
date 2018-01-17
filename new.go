@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"time"
-	"gopkg.in/mgo.v2/bson"
-	"gopkg.in/mgo.v2"
 )
 
 const (
@@ -26,8 +26,7 @@ const (
 var (
 	MongoSession, err = mgo.Dial("127.0.0.1")
 	DB                = "worktest"
-	CheckWebsite        = "check_website"
-
+	CheckWebsite      = "check_website"
 )
 
 func init() {
@@ -50,18 +49,18 @@ func Session() *mgo.Session {
 }
 
 type CUrl struct {
-	Id           bson.ObjectId `json:"id" bson:"_id"`
-	CrawlUrl    string `json:"CrawlUrl" bson:"crawl_url"`
-	StatusCode  int    `json:"StatusCode" bson:"status_code"`
-	Origin      string `json:"Origin" bson:"origin"`
-	Domain      string `json:"Domain" bson:"domain"`
-	RefUrl      string `json:"RefUrl" bson:"ref_url"`
-	ContentType string `json:"ContentType" bson:"content_type"`
+	Id          bson.ObjectId `json:"id" bson:"_id"`
+	CrawlUrl    string        `json:"CrawlUrl" bson:"crawl_url"`
+	StatusCode  int           `json:"StatusCode" bson:"status_code"`
+	Origin      string        `json:"Origin" bson:"origin"`
+	Domain      string        `json:"Domain" bson:"domain"`
+	RefUrl      string        `json:"RefUrl" bson:"ref_url"`
+	ContentType string        `json:"ContentType" bson:"content_type"`
 	updateAt    time.Time     `json:"-" bson:"created_at"`
-	QueryError	string `json:"QueryError" bson:"query_error"`
+	QueryError  string        `json:"QueryError" bson:"query_error"`
 }
 
-func (cu *CUrl) Insert () error {
+func (cu *CUrl) Insert() error {
 
 	session := Session()
 	defer session.Close()
@@ -72,7 +71,6 @@ func (cu *CUrl) Insert () error {
 	return c.Insert(cu)
 
 }
-
 
 func main() {
 
@@ -85,7 +83,7 @@ func main() {
 	var errorArryay = make([]CUrl, 500)
 
 	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
-	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
+	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[1]}
 	//将根域名放入channel
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
@@ -119,10 +117,9 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
-		cu.QueryError = err.Error()//todo
+		cu.QueryError = err.Error() //todo
 	}
 
-	log.Println("Crawl		" + cu.CrawlUrl)
 	respBody, StatusCode, ContentType := Crawling(cu.CrawlUrl)
 
 	//爬过的链接放入trailMap
@@ -142,13 +139,10 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	//	log.Println("Insert		" + err.Error())
 	//}
 
-
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
-
 		hrefArray, srcArray := ExtractBody(respBody)
-
 		ArrayToUrl(cu, hrefArray, cH, tM)
 		ArrayToUrl(cu, srcArray, cH, tM)
 	}
@@ -234,13 +228,13 @@ func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 		//引用为路径则拼接为完整url
 		if ReHaveSlash(ha) || ReIsLink(ha) {
 			unitCurl.Origin = ha
-				if ReHaveSlash(ha) {
-					unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
-				}else {
-					unitCurl.CrawlUrl = ha
-				}
+			if ReHaveSlash(ha) {
+				unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+			} else {
+				unitCurl.CrawlUrl = ha
+			}
 			unitCurl.RefUrl = cU.CrawlUrl
-			//如果拼接符合url正则且不在Map内的的放入channel和Map todo "http://url/a.jpg"
+			//如果拼接符合url正则且不在Map内的的放入channel和Map
 			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0 {
 				UrlToChMAP(unitCurl, cH, tM)
 			} else {
@@ -270,15 +264,22 @@ func ExtractBody(s string) ([][]string, [][]string) {
 
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
+	log.Println("Crawl		" + surl)
 	var respBody string
 
 	resp, err := http.Head(surl)
+	log.Println("Head		" + surl)
 	if err != nil {
 		log.Print(err)
 	}
 
 	if resp == nil {
 		resp, err = http.Get(surl)
+		log.Println("GetForNoHead		" + surl)
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 
 	respstatusCode := resp.StatusCode
@@ -286,6 +287,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	if respContentType == "text/html; charset=utf-8" {
 		resp, err = http.Get(surl)
+		log.Println("GetForBoby		" + surl)
 		if err != nil {
 			log.Print(err)
 		}
@@ -297,8 +299,6 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	} else {
 		respBody = "nohtml"
 	}
-
-
 
 	defer resp.Body.Close()
 
