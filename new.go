@@ -94,6 +94,7 @@ func main() {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
 			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 
@@ -136,7 +137,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 		*eA = append(*eA, cu)
 	}
 
-	err = cu.Insert()
+	//err = cu.Insert()
 	if err != nil{
 		log.Println("Insert		" + err.Error())
 	}
@@ -274,6 +275,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	resp, err := http.Head(surl)
 	if err != nil {
 		log.Print(err)
+	}
+
+	if resp == nil {
+		resp, err = http.Get(surl)
 	}
 
 	respstatusCode := resp.StatusCode
