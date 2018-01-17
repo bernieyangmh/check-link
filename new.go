@@ -281,6 +281,9 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		}
 
 	}
+	if resp == nil {
+		return  "", -2 ,""
+	}
 
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
