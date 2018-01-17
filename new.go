@@ -119,7 +119,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
-		cu.QueryError = err.Error()
+		cu.QueryError = err.Error()//todo
 	}
 
 	log.Println("Crawl		" + cu.CrawlUrl)
@@ -138,9 +138,9 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	}
 
 	//err = cu.Insert()
-	if err != nil{
-		log.Println("Insert		" + err.Error())
-	}
+	//if err != nil{
+	//	log.Println("Insert		" + err.Error())
+	//}
 
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
@@ -294,6 +294,8 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 			log.Println(err)
 		}
 		respBody = string(body)
+	} else {
+		respBody = "nohtml"
 	}
 
 
