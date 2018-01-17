@@ -92,6 +92,7 @@ func main() {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
 			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
+			fmt.Println(len(executeChannel))
 			time.Sleep(time.Millisecond * 500)
 		}
 	}
@@ -113,6 +114,7 @@ func main() {
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
+	log.Println("func		IterCrawl")
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
@@ -150,11 +152,13 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 
 //将url放入管道
 func PutChannel(cu CUrl, ch chan<- CUrl) {
+	log.Println("func		PutChannel")
 	ch <- cu
 }
 
 //从管道中取出一个url
 func GetChannel(ch chan CUrl) CUrl {
+	log.Println("func		GetChannel")
 
 	select {
 	case u := <-ch:
@@ -221,6 +225,8 @@ func ReHaveSlash(s string) bool {
 
 //读取数组内的路径，处理为完整url,如果不在Map里放入ch和map
 func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
+	log.Println("func		ArrayToUrl")
+
 	var unitCurl CUrl
 	for i := 0; i < len(a); i++ {
 		ha := a[i][1]
@@ -249,6 +255,8 @@ func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 
 //将连接放入channel和map
 func UrlToChMAP(cu CUrl, ch chan<- CUrl, tm map[string]int) {
+	log.Println("func		UrlToChMAP")
+
 	tm[cu.CrawlUrl] = -1
 	log.Println("put			" + cu.CrawlUrl)
 	PutChannel(cu, ch)
@@ -257,6 +265,8 @@ func UrlToChMAP(cu CUrl, ch chan<- CUrl, tm map[string]int) {
 
 //从body里拿到href和src的相对路径
 func ExtractBody(s string) ([][]string, [][]string) {
+	log.Println("func		ExtractBody")
+
 	hrefArray := ReHrefSubMatch(s)
 	srcArray := ReSrcSubMatch(s)
 	return hrefArray, srcArray
@@ -264,6 +274,8 @@ func ExtractBody(s string) ([][]string, [][]string) {
 
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
+	log.Println("func		Crawling")
+
 	log.Println("Crawl		" + surl)
 	var respBody string
 
@@ -282,7 +294,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	}
 	if resp == nil {
-		return  "", -2 ,""
+		return "", -2, ""
 	}
 
 	respstatusCode := resp.StatusCode
@@ -310,6 +322,8 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 //拼接domain和path
 func StitchUrl(DomainString string, PathString string) (UString string) {
+	log.Println("func		StitchUrl")
+
 	var resUrlBuffer bytes.Buffer
 
 	resUrlBuffer.WriteString(DomainString)
@@ -322,6 +336,8 @@ func StitchUrl(DomainString string, PathString string) (UString string) {
 
 //将Scheme和Host拼接为domain
 func StitchDomain(s string, h string) string {
+	log.Println("func		StitchDomain")
+
 	var resUrlBuffer bytes.Buffer
 
 	resUrlBuffer.WriteString(s)
@@ -336,6 +352,7 @@ func StitchDomain(s string, h string) string {
 
 //从链接里提取出domain,host
 func GetDomainHost(u string) (string, string, error) {
+	log.Println("func		GetDomainHost")
 
 	if !ReIsLink(u) {
 		return "", "", errors.New("不符合链接正则")
