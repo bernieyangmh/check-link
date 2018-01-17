@@ -29,6 +29,13 @@ var (
 	CheckWebsite      = "check_website"
 )
 
+var client = &http.Client{
+			Timeout: time.Duration(5 * time.Second),
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+
 func init() {
 	//group coll
 	crawlurlIndex := mgo.Index{
@@ -77,9 +84,9 @@ func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
 
-	var executeChannel = make(chan CUrl, 2000)
+	var executeChannel = make(chan CUrl, 5000)
 	var trailMap = make(map[string]int)
-	var finishArray = make([]CUrl, 3000)
+	var finishArray = make([]CUrl, 10000)
 	var errorArryay = make([]CUrl, 500)
 
 	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
@@ -279,14 +286,14 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	log.Println("Crawl		" + surl)
 	var respBody string
 
-	resp, err := http.Head(surl)
+	resp, err := client.Head(surl)
 	log.Println("Head		" + surl)
 	if err != nil {
 		log.Print(err)
 	}
 
 	if resp == nil {
-		resp, err = http.Get(surl)
+		resp, err = client.Get(surl)
 		log.Println("GetForNoHead		" + surl)
 		if err != nil {
 			log.Println(err)
@@ -301,7 +308,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respContentType := resp.Header.Get("Content-Type")
 
 	if respContentType == "text/html; charset=utf-8" {
-		resp, err = http.Get(surl)
+		resp, err = client.Get(surl)
 		log.Println("GetForBoby		" + surl)
 		if err != nil {
 			log.Print(err)
