@@ -12,13 +12,14 @@ import (
 	"net/url"
 	"regexp"
 	"time"
+
 )
 
 const (
 	PATTERN_SRC   = `src=\"(.*?)\"`
 	PATTERN_HERF  = `href=\"(.*?)\"`
-	PATTERN_HTTP  = `http(.*?)`
-	PATTERN_LINK  = `https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
+	PATTERN_HTTP  = `^http(.*?)`
+	PATTERN_LINK  = `^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
 	PATTERN_SLASH = `^/(.*?)`
 	ALLOW_DOMAIN  = `(qiniu.com)|(qiniu.com.cn)`
 )
@@ -30,10 +31,10 @@ var (
 )
 
 var client = &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		}
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
 
 func init() {
 	//group coll
@@ -54,6 +55,9 @@ func Session() *mgo.Session {
 	return MongoSession.Copy()
 }
 
+//-1		链接放入管道未爬取
+//-2		http请求报错
+//-3		读取管道超时，一般为没有新链接放入管道，自动结束
 type CUrl struct {
 	Id          bson.ObjectId `json:"id" bson:"_id"`
 	CrawlUrl    string        `json:"CrawlUrl" bson:"crawl_url"`
@@ -123,7 +127,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
-		cu.QueryError = err.Error() //todo
+		cu.QueryError = err.Error()
 	}
 
 	respBody, StatusCode, ContentType := Crawling(cu.CrawlUrl)
@@ -137,6 +141,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 
 	*fA = append(*fA, cu)
 	if cu.StatusCode != 200 {
+		cu.QueryError = respBody
 		*eA = append(*eA, cu)
 	}
 
@@ -167,7 +172,7 @@ func GetChannel(ch chan CUrl) CUrl {
 		return u
 	case <-time.After(time.Second * 10):
 		close(ch)
-		return CUrl{CrawlUrl: "close"}
+		return CUrl{QueryError: "TimeOutClose", StatusCode:-3}
 	}
 }
 
@@ -208,52 +213,25 @@ func ReLinkSubMatch(s string) [][]string {
 //re匹配http链接
 func ReIsHttp(s string) bool {
 	reHttp, _ := regexp.Compile(PATTERN_HTTP)
-	a := reHttp.FindStringIndex(s)
-
-	if a !=nil {
-		if a[0] == 0 {
-			return true
-		}else {
-			return false
-		}
-	}else {
-		return false
-	}
-
+	a := reHttp.MatchString(s)
+	return a
 }
 
 //re匹配链接
-//todo  may be optimize
 func ReIsLink(s string) bool {
 	reLink, _ := regexp.Compile(PATTERN_LINK)
-	a := reLink.FindStringIndex(s)
+	a := reLink.MatchString(s)
 
-	if a !=nil {
-		if a[0] == 0 {
-			return true
-		}else {
-			return false
-		}
-	}else {
-		return false
-	}
+	return a
 
 }
 
-//re匹配/
+//re匹配slasp
 func ReHaveSlash(s string) bool {
 	reSlash, _ := regexp.Compile(PATTERN_SLASH)
-	a := reSlash.FindStringIndex(s)
+	a := reSlash.MatchString(s)
 
-	if a !=nil {
-		if a[0] == 0 {
-			return true
-		}else {
-			return false
-		}
-	}else {
-		return false
-	}
+	return a
 
 }
 
@@ -314,7 +292,8 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		log.Print(err)
 	}
 
-	if resp == nil {
+	//链接不允许HEAD方法或直接关闭链接，换用Get
+	if resp == nil || resp.StatusCode ==405  {
 		log.Println("GetForNoHead		" + surl)
 		resp, err = client.Get(surl)
 		if err != nil {
@@ -323,7 +302,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	}
 	if resp == nil {
-		return "", -2, ""
+		return err.Error(), -2, "error"
 	}
 
 	respstatusCode := resp.StatusCode
