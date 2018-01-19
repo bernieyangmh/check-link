@@ -109,10 +109,11 @@ func main() {
 	for i := 0; i < len(finishArray); i++ {
 		if finishArray[i].StatusCode != 0 {
 			fmt.Println(finishArray[i])
+			finishArray[i].Insert()
 		}
 	}
 
-	log.Println("/n url num is %d/n", len(finishArray))
+	log.Println("\n url num is %d \n", len(finishArray))
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
@@ -146,13 +147,12 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	*fA = append(*fA, cu)
 	if cu.StatusCode == -2 {
 		cu.QueryError = respBody
+	}
+
+	if cu.StatusCode !=200 {
 		*eA = append(*eA, cu)
 	}
 
-	//err = cu.Insert()
-	//if err != nil{
-	//	log.Println("Insert		" + err.Error())
-	//}
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
