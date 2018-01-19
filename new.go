@@ -116,7 +116,11 @@ func main() {
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
-			fmt.Println(errorArryay[i])
+			fmt.Println(errorArryay[i].CrawlUrl)
+			fmt.Println(errorArryay[i].RefUrl)
+			fmt.Println(errorArryay[i].StatusCode)
+			fmt.Println(errorArryay[i].QueryError)
+			fmt.Println("\n")
 		}
 	}
 }
@@ -140,7 +144,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	cu.Domain = s_domain
 
 	*fA = append(*fA, cu)
-	if cu.StatusCode != 200 {
+	if cu.StatusCode == -2 {
 		cu.QueryError = respBody
 		*eA = append(*eA, cu)
 	}
