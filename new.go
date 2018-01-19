@@ -289,9 +289,12 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	log.Println("func		Crawling")
 
 	var respBody string
+	var respstatusCode int
+	var respContentType string
 
 	log.Println("Head		" + surl)
 	resp, err := client.Head(surl)
+
 	if err != nil {
 		log.Print(err)
 	}
@@ -308,9 +311,12 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	if resp == nil {
 		return err.Error(), -2, "error"
 	}
+	respstatusCode = resp.StatusCode
+	respContentType = resp.Header.Get("Content-Type")
 
-	respstatusCode := resp.StatusCode
-	respContentType := resp.Header.Get("Content-Type")
+	if 301 == resp.StatusCode || resp.StatusCode == 302{
+		respBody, respstatusCode, respContentType = GetFromRedirectUrl(resp.Header.Get("Location"), 1)
+	}
 
 	if respContentType == "text/html; charset=utf-8" {
 		log.Println("GetForBoby		" + surl)
@@ -375,4 +381,31 @@ func GetDomainHost(u string) (string, string, error) {
 	domainString := StitchDomain(pu.Scheme, pu.Host)
 	return domainString, pu.Host, nil
 
+}
+
+//判断301跳转是否正确
+func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
+
+	resp, err := client.Head(lu)
+	if err != nil {
+		log.Println(err)
+	}
+	if resp == nil {
+		return err.Error(), -2, "error"
+	}
+
+	if resp.StatusCode == 200 {
+		return "200nohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+	}
+
+	if resp.StatusCode == 301 || resp.StatusCode == 302 {
+		if rn < 10 {
+			rn += 1
+			return GetFromRedirectUrl(resp.Header.Get("Location"), rn)
+		} else {
+			return "redirect too much times", -2, "error"
+		}
+
+	}
+	return "xxxnohtml", resp.StatusCode, resp.Header.Get("Content-Type")
 }
