@@ -1,9 +1,10 @@
 package check_link
 
 import (
-	"net/http"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"fmt"
 )
 
 var client = &http.Client{
@@ -11,7 +12,6 @@ var client = &http.Client{
 		return http.ErrUseLastResponse
 	},
 }
-
 
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
 
@@ -50,7 +50,6 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	}
 }
 
-
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
 	log.Println("func		Crawling")
@@ -64,7 +63,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	}
 
 	//链接不允许HEAD方法或直接关闭链接，换用Get
-	if resp == nil || resp.StatusCode ==405  {
+	if resp == nil || resp.StatusCode == 405 {
 		log.Println("GetForNoHead		" + surl)
 		resp, err = client.Get(surl)
 		if err != nil {
@@ -98,3 +97,36 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	return respBody, respstatusCode, respContentType
 }
+
+func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl)  {
+	for len(eC) > 0 {
+		aimUrl := GetChannel(eC)
+		if aimUrl.CrawlUrl != "close" {
+			IterCrawl(aimUrl, tM, eC, &fA, &eA)
+			fmt.Println(len(eC))
+		}
+	}
+
+	for i := 0; i < len(fA); i++ {
+		if fA[i].StatusCode != 0 {
+			fmt.Println(fA[i])
+			err := fA[i].Insert()
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+
+	log.Println("/n url num is %d/n", len(fA))
+
+	for i := 0; i < len(eA); i++ {
+		if eA[i].StatusCode != 0 {
+			fmt.Println(eA[i].CrawlUrl)
+			fmt.Println(eA[i].RefUrl)
+			fmt.Println(eA[i].StatusCode)
+			fmt.Println(eA[i].QueryError)
+			fmt.Println("\n")
+		}
+	}
+}
+

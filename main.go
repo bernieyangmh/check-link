@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"check-link"
+	"log"
 )
-
 
 func main() {
 
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
+
 	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
 
 	var executeChannel = make(chan check_link.CUrl, 5000)
@@ -23,29 +22,7 @@ func main() {
 	check_link.PutChannel(firCrawl, executeChannel)
 	check_link.PutChannel(secCrawl, executeChannel)
 
-	for len(executeChannel) > 0 {
-		aimUrl := check_link.GetChannel(executeChannel)
-		if aimUrl.CrawlUrl != "close" {
-			check_link.IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
-			fmt.Println(len(executeChannel))
-		}
-	}
 
-	for i := 0; i < len(finishArray); i++ {
-		if finishArray[i].StatusCode != 0 {
-			fmt.Println(finishArray[i])
-		}
-	}
+	check_link.LanuchCrawl(executeChannel, trailMap, finishArray, errorArryay)
 
-	log.Println("/n url num is %d/n", len(finishArray))
-
-	for i := 0; i < len(errorArryay); i++ {
-		if errorArryay[i].StatusCode != 0 {
-			fmt.Println(errorArryay[i].CrawlUrl)
-			fmt.Println(errorArryay[i].RefUrl)
-			fmt.Println(errorArryay[i].StatusCode)
-			fmt.Println(errorArryay[i].QueryError)
-			fmt.Println("\n")
-		}
-	}
 }

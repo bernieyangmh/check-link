@@ -11,7 +11,6 @@ const (
 	ALLOW_DOMAIN  = `(qiniu.com)|(qiniu.com.cn)`
 )
 
-
 //返回匹配href=的相对路径数组
 func ReDomainMatch(s string) bool {
 	reDomain, _ := regexp.Compile(ALLOW_DOMAIN)

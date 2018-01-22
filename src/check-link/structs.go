@@ -3,14 +3,14 @@ package check_link
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"time"
 	"log"
+	"time"
 )
 
 var (
 	MongoSession, err = mgo.Dial("127.0.0.1")
 	DB                = "worktest"
-	CheckWebsite      = "check_website"
+	CheckUrl      = "check_url"
 )
 
 func init() {
@@ -22,7 +22,7 @@ func init() {
 		Background: true, // See notes.
 		Sparse:     false,
 	}
-	err := MongoSession.DB(DB).C(CheckWebsite).EnsureIndex(crawlurlIndex)
+	err := MongoSession.DB(DB).C(CheckUrl).EnsureIndex(crawlurlIndex)
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ type CUrl struct {
 	Domain      string        `json:"Domain" bson:"domain"`
 	RefUrl      string        `json:"RefUrl" bson:"ref_url"`
 	ContentType string        `json:"ContentType" bson:"content_type"`
-	updateAt    time.Time     `json:"-" bson:"created_at"`
+	updateAt    time.Time     `json:"-" bson:"update_at"`
 	QueryError  string        `json:"QueryError" bson:"query_error"`
 }
 
@@ -51,7 +51,7 @@ func (cu *CUrl) Insert() error {
 
 	session := Session()
 	defer session.Close()
-	c := session.DB(DB).C(CheckWebsite)
+	c := session.DB(DB).C(CheckUrl)
 	cu.Id = bson.NewObjectId()
 	cu.updateAt = time.Now()
 
@@ -64,10 +64,18 @@ func (cu *CUrl) Update() error {
 
 	session := Session()
 	defer session.Close()
-	c := session.DB(DB).C(CheckWebsite)
+	c := session.DB(DB).C(CheckUrl)
 
 	selector := bson.M{"crawl_url": cu.CrawlUrl}
-	data := bson.M{"crawl_url": "testupdate1111111111"}
+	data := bson.M{
+		"status_code":  cu.StatusCode,
+		"origin":       cu.Origin,
+		"domain":       cu.Domain,
+		"ref_url":      cu.RefUrl,
+		"content_type": cu.ContentType,
+		"update_at":    time.Now(),
+		"query_error":  cu.QueryError,
+	}
 	return c.Update(selector, data)
 
 }

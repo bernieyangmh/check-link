@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"regexp"
 	"time"
-
 )
 
 const (
@@ -27,7 +26,7 @@ const (
 var (
 	MongoSession, err = mgo.Dial("127.0.0.1")
 	DB                = "worktest"
-	CheckWebsite      = "check_website"
+	CheckUrl      = "check_url"
 )
 
 var client = &http.Client{
@@ -149,10 +148,9 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 		cu.QueryError = respBody
 	}
 
-	if cu.StatusCode !=200 {
+	if cu.StatusCode != 200 {
 		*eA = append(*eA, cu)
 	}
-
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
@@ -176,7 +174,7 @@ func GetChannel(ch chan CUrl) CUrl {
 		return u
 	case <-time.After(time.Second * 10):
 		close(ch)
-		return CUrl{QueryError: "TimeOutClose", StatusCode:-3}
+		return CUrl{QueryError: "TimeOutClose", StatusCode: -3}
 	}
 }
 
@@ -300,7 +298,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	}
 
 	//链接不允许HEAD方法或直接关闭链接，换用Get
-	if resp == nil || resp.StatusCode ==405  {
+	if resp == nil || resp.StatusCode == 405 {
 		log.Println("GetForNoHead		" + surl)
 		resp, err = client.Get(surl)
 		if err != nil {
@@ -314,7 +312,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respstatusCode = resp.StatusCode
 	respContentType = resp.Header.Get("Content-Type")
 
-	if 301 == resp.StatusCode || resp.StatusCode == 302{
+	if 301 == resp.StatusCode || resp.StatusCode == 302 {
 		respBody, respstatusCode, respContentType = GetFromRedirectUrl(resp.Header.Get("Location"), 1)
 	}
 

@@ -1,14 +1,12 @@
 package check_link
 
 import (
-	"time"
-	"log"
 	"bytes"
-	"net/url"
 	"errors"
-
+	"log"
+	"net/url"
+	"time"
 )
-
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
 
@@ -16,8 +14,6 @@ import (
 func PutChannel(cu CUrl, ch chan<- CUrl) {
 	ch <- cu
 }
-
-
 
 //从管道中取出一个url
 func GetChannel(ch chan CUrl) CUrl {
@@ -27,7 +23,7 @@ func GetChannel(ch chan CUrl) CUrl {
 		return u
 	case <-time.After(time.Second * 10):
 		close(ch)
-		return CUrl{QueryError: "TimeOutClose", StatusCode:-3}
+		return CUrl{QueryError: "TimeOutClose", StatusCode: -3}
 	}
 }
 
@@ -75,7 +71,6 @@ func ExtractBody(s string) ([][]string, [][]string) {
 	srcArray := ReSrcSubMatch(s)
 	return hrefArray, srcArray
 }
-
 
 //拼接domain和path
 func StitchUrl(DomainString string, PathString string) (UString string) {
