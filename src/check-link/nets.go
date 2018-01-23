@@ -33,6 +33,9 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	*fA = append(*fA, cu)
 	if cu.StatusCode == -2 {
 		cu.QueryError = respBody
+	}
+
+	if cu.StatusCode != 200 {
 		*eA = append(*eA, cu)
 	}
 
@@ -108,12 +111,11 @@ func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl)  {
 	}
 
 	for i := 0; i < len(fA); i++ {
-		if fA[i].StatusCode != 0 {
-			fmt.Println(fA[i])
-			err := fA[i].Insert()
-			if err != nil {
-				log.Println(err)
-			}
+		fmt.Println(fA[i])
+		err := fA[i].Insert()
+		if err != nil {
+			log.Println(err)
+		
 		}
 	}
 
