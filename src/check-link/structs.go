@@ -10,7 +10,7 @@ import (
 var (
 	MongoSession, err = mgo.Dial("127.0.0.1")
 	DB                = "worktest"
-	CheckUrl      = "check_url"
+	CheckUrl          = "check_url"
 )
 
 func init() {
@@ -77,5 +77,15 @@ func (cu *CUrl) Update() error {
 		"query_error":  cu.QueryError,
 	}
 	return c.Update(selector, data)
+
+}
+
+//todo 不直接返回，抽象出来
+func GetIterUrl() *mgo.Iter {
+	session := Session()
+	c := session.DB(DB).C(CheckUrl)
+	find := c.Find(bson.M{}).Select(bson.M{"crawl_url": 1})
+	items := find.Iter()
+	return items
 
 }

@@ -1,10 +1,10 @@
 package check_link
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"fmt"
 )
 
 var client = &http.Client{
@@ -101,7 +101,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	return respBody, respstatusCode, respContentType
 }
 
-func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl)  {
+func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl) {
 	for len(eC) > 0 {
 		aimUrl := GetChannel(eC)
 		if aimUrl.CrawlUrl != "close" {
@@ -115,7 +115,7 @@ func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl)  {
 		err := fA[i].Insert()
 		if err != nil {
 			log.Println(err)
-		
+
 		}
 	}
 
@@ -132,3 +132,20 @@ func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl)  {
 	}
 }
 
+func DailyCheck() {
+	type Item struct {
+		CrawlUrl string `bson:"crawl_url"`
+		RefUrl   string `json:"RefUrl" bson:"ref_url"`
+	}
+	item := Item{}
+	items := GetIterUrl()
+	for items.Next(&item) {
+		url := item.CrawlUrl
+		ResponseBodyString, StatusCode, _ := Crawling(url)
+		fmt.Println(url)
+		fmt.Println(item.RefUrl)
+		fmt.Println(StatusCode)
+		fmt.Println(ResponseBodyString)
+
+	}
+}
