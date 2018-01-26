@@ -55,7 +55,6 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
-	log.Println("func		Crawling")
 
 	var respBody string
 
@@ -142,6 +141,8 @@ func DailyCheck() {
 	for items.Next(&item) {
 		url := item.CrawlUrl
 		ResponseBodyString, StatusCode, _ := Crawling(url)
+
+		fmt.Println("\n")
 		fmt.Println(url)
 		fmt.Println(item.RefUrl)
 		fmt.Println(StatusCode)

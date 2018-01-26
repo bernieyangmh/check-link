@@ -84,7 +84,7 @@ func (cu *CUrl) Update() error {
 func GetIterUrl() *mgo.Iter {
 	session := Session()
 	c := session.DB(DB).C(CheckUrl)
-	find := c.Find(bson.M{}).Select(bson.M{"crawl_url": 1})
+	find := c.Find(bson.M{}).Select(bson.M{"crawl_url": 1, "ref_url": 1})
 	items := find.Iter()
 	return items
 
