@@ -145,7 +145,10 @@ func DailyCheck() {
 		fmt.Println(url)
 		fmt.Println(item.RefUrl)
 		fmt.Println(StatusCode)
-		fmt.Println(ResponseBodyString)
+		if StatusCode == -2 {
+			fmt.Println(ResponseBodyString)
+		}
+		fmt.Println("\n\n----------------------------------------------")
 
 	}
 }
