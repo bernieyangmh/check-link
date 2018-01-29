@@ -48,8 +48,8 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
 		hrefArray, srcArray := ExtractBody(respBody)
-		ArrayToUrl(cu, hrefArray, cH, tM)
-		ArrayToUrl(cu, srcArray, cH, tM)
+		DomArrayToUrl(cu, hrefArray, cH, tM)
+		ReArrayToUrl(cu, srcArray, cH, tM)
 	}
 }
 
@@ -80,6 +80,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
+	if 301 == resp.StatusCode || resp.StatusCode == 302 {
+		respBody, respstatusCode, respContentType = GetFromRedirectUrl(resp.Header.Get("Location"), 1)
+	}
+
 	if respContentType == "text/html; charset=utf-8" {
 		log.Println("GetForBoby		" + surl)
 		resp, err = client.Get(surl)
@@ -100,32 +104,74 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	return respBody, respstatusCode, respContentType
 }
 
-func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl) {
-	for len(eC) > 0 {
-		aimUrl := GetChannel(eC)
+//检查重定向是否正确
+func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
+
+	resp, err := client.Head(lu)
+	if err != nil {
+		log.Println(err)
+	}
+	if resp == nil {
+		return err.Error(), -2, "error"
+	}
+
+	if resp.StatusCode == 200 {
+		return "redict200nohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+	}
+
+	if resp.StatusCode == 301 || resp.StatusCode == 302 {
+		if rn < 10 {
+			rn += 1
+			return GetFromRedirectUrl(resp.Header.Get("Location"), rn)
+		} else {
+			return "redirect too much times", -2, "error"
+		}
+
+	}
+	return "xxxnohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+}
+
+func LanuchCrawl() {
+
+	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
+
+	var executeChannel = make(chan CUrl, 5000)
+	var trailMap = make(map[string]int)
+	var finishArray = make([]CUrl, 0, 10000)
+	var errorArryay = make([]CUrl, 0, 1000)
+
+	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
+	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[1]}
+	//将根域名放入channel
+	PutChannel(firCrawl, executeChannel)
+	PutChannel(secCrawl, executeChannel)
+
+	for len(executeChannel) > 0 {
+		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
-			IterCrawl(aimUrl, tM, eC, &fA, &eA)
-			fmt.Println(len(eC))
+			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
+			fmt.Println(len(executeChannel))
 		}
 	}
 
-	for i := 0; i < len(fA); i++ {
-		fmt.Println(fA[i])
-		err := fA[i].Insert()
+	for i := 0; i < len(finishArray); i++ {
+		fmt.Println(finishArray[i])
+		err := finishArray[i].Insert()
 		if err != nil {
 			log.Println(err)
 
 		}
 	}
 
-	log.Println("/n url num is %d/n", len(fA))
+	log.Println("/n url num is %d/n", len(finishArray))
 
-	for i := 0; i < len(eA); i++ {
-		if eA[i].StatusCode != 0 {
-			fmt.Println(eA[i].CrawlUrl)
-			fmt.Println(eA[i].RefUrl)
-			fmt.Println(eA[i].StatusCode)
-			fmt.Println(eA[i].QueryError)
+	for i := 0; i < len(errorArryay); i++ {
+		if errorArryay[i].StatusCode != 0 {
+			log.Println(errorArryay[i].CrawlUrl)
+			fmt.Println(errorArryay[i].RefUrl)
+			fmt.Println(errorArryay[i].StatusCode)
+			fmt.Println(errorArryay[i].Context)
+			fmt.Println(errorArryay[i].QueryError)
 			fmt.Println("\n")
 		}
 	}
