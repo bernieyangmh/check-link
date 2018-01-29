@@ -80,6 +80,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
+	if 301 == resp.StatusCode || resp.StatusCode == 302 {
+		respBody, respstatusCode, respContentType = GetFromRedirectUrl(resp.Header.Get("Location"), 1)
+	}
+
 	if respContentType == "text/html; charset=utf-8" {
 		log.Println("GetForBoby		" + surl)
 		resp, err = client.Get(surl)
@@ -98,6 +102,33 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	defer resp.Body.Close()
 
 	return respBody, respstatusCode, respContentType
+}
+
+//检查重定向是否正确
+func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
+
+	resp, err := client.Head(lu)
+	if err != nil {
+		log.Println(err)
+	}
+	if resp == nil {
+		return err.Error(), -2, "error"
+	}
+
+	if resp.StatusCode == 200 {
+		return "redict200nohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+	}
+
+	if resp.StatusCode == 301 || resp.StatusCode == 302 {
+		if rn < 10 {
+			rn += 1
+			return GetFromRedirectUrl(resp.Header.Get("Location"), rn)
+		} else {
+			return "redirect too much times", -2, "error"
+		}
+
+	}
+	return "xxxnohtml", resp.StatusCode, resp.Header.Get("Content-Type")
 }
 
 func LanuchCrawl() {
@@ -136,7 +167,7 @@ func LanuchCrawl() {
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
-			fmt.Println(errorArryay[i].CrawlUrl)
+			log.Println(errorArryay[i].CrawlUrl)
 			fmt.Println(errorArryay[i].RefUrl)
 			fmt.Println(errorArryay[i].StatusCode)
 			fmt.Println(errorArryay[i].Context)

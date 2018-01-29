@@ -157,7 +157,6 @@ func GetHerfFromHtml(s string) []CUrl {
 	return hrefArray
 }
 
-
 func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 
 	for i := 0; i < len(a); i++ {
