@@ -1,7 +1,6 @@
 package check_link
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -39,17 +38,12 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 		*eA = append(*eA, cu)
 	}
 
-	//err = cu.Insert()
-	//if err != nil{
-	//	log.Println("Insert		" + err.Error())
-	//}
-
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
 		hrefArray, srcArray := ExtractBody(respBody)
-		ArrayToUrl(cu, hrefArray, cH, tM)
-		ArrayToUrl(cu, srcArray, cH, tM)
+		DomArrayToUrl(cu, hrefArray, cH, tM)
+		ReArrayToUrl(cu, srcArray, cH, tM)
 	}
 }
 
@@ -80,6 +74,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
+	if 301 == resp.StatusCode || resp.StatusCode == 302 {
+		respBody, respstatusCode, respContentType = GetFromRedirectUrl(resp.Header.Get("Location"), 1)
+	}
+
 	if respContentType == "text/html; charset=utf-8" {
 		log.Println("GetForBoby		" + surl)
 		resp, err = client.Get(surl)
@@ -100,56 +98,29 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	return respBody, respstatusCode, respContentType
 }
 
-func LanuchCrawl(eC chan CUrl, tM map[string]int, fA []CUrl, eA []CUrl) {
-	for len(eC) > 0 {
-		aimUrl := GetChannel(eC)
-		if aimUrl.CrawlUrl != "close" {
-			IterCrawl(aimUrl, tM, eC, &fA, &eA)
-			fmt.Println(len(eC))
+//检查重定向是否正确
+func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
+
+	resp, err := client.Head(lu)
+	if err != nil {
+		log.Println(err)
+	}
+	if resp == nil {
+		return err.Error(), -2, "error"
+	}
+
+	if resp.StatusCode == 200 {
+		return "redict200nohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+	}
+
+	if resp.StatusCode == 301 || resp.StatusCode == 302 {
+		if rn < 10 {
+			rn += 1
+			return GetFromRedirectUrl(resp.Header.Get("Location"), rn)
+		} else {
+			return "redirect too much times", -2, "error"
 		}
-	}
-
-	for i := 0; i < len(fA); i++ {
-		fmt.Println(fA[i])
-		err := fA[i].Insert()
-		if err != nil {
-			log.Println(err)
-
-		}
-	}
-
-	log.Println("/n url num is %d/n", len(fA))
-
-	for i := 0; i < len(eA); i++ {
-		if eA[i].StatusCode != 0 {
-			fmt.Println(eA[i].CrawlUrl)
-			fmt.Println(eA[i].RefUrl)
-			fmt.Println(eA[i].StatusCode)
-			fmt.Println(eA[i].QueryError)
-			fmt.Println("\n")
-		}
-	}
-}
-
-func DailyCheck() {
-	type Item struct {
-		CrawlUrl string `bson:"crawl_url"`
-		RefUrl   string `json:"RefUrl" bson:"ref_url"`
-	}
-	item := Item{}
-	items := GetIterUrl()
-	for items.Next(&item) {
-		url := item.CrawlUrl
-		ResponseBodyString, StatusCode, _ := Crawling(url)
-
-		fmt.Println("\n")
-		fmt.Println(url)
-		fmt.Println(item.RefUrl)
-		fmt.Println(StatusCode)
-		if StatusCode == -2 {
-			fmt.Println(ResponseBodyString)
-		}
-		fmt.Println("\n\n----------------------------------------------")
 
 	}
+	return "xxxnohtml", resp.StatusCode, resp.Header.Get("Content-Type")
 }

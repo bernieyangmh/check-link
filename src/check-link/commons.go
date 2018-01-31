@@ -3,9 +3,14 @@ package check_link
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html"
 	"log"
 	"net/url"
+	"strings"
 	"time"
+	"unicode"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -28,7 +33,7 @@ func GetChannel(ch chan CUrl) CUrl {
 }
 
 //读取数组内的路径，处理为完整url,如果不在Map里放入ch和map
-func ArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
+func ReArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 
 	var unitCurl CUrl
 	for i := 0; i < len(a); i++ {
@@ -66,8 +71,9 @@ func UrlToChMAP(cu CUrl, ch chan<- CUrl, tm map[string]int) {
 }
 
 //从body里拿到href和src的相对路径
-func ExtractBody(s string) ([][]string, [][]string) {
-	hrefArray := ReHrefSubMatch(s)
+func ExtractBody(s string) ([]CUrl, [][]string) {
+
+	hrefArray := GetHerfFromHtml(s)
 	srcArray := ReSrcSubMatch(s)
 	return hrefArray, srcArray
 }
@@ -115,4 +121,145 @@ func GetDomainHost(u string) (string, string, error) {
 	domainString := StitchDomain(pu.Scheme, pu.Host)
 	return domainString, pu.Host, nil
 
+}
+
+//去掉全部空格
+func SpaceMap(str string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, str)
+}
+
+//解析body拿到href链接及文本dom内容
+func GetHerfFromHtml(s string) []CUrl {
+	hrefArray := make([]CUrl, 0)
+
+	node, err := html.Parse(strings.NewReader(s))
+	if err != nil {
+		log.Print(err)
+	}
+	doc := goquery.NewDocumentFromNode(node)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Find the review items
+	doc.Find("html a").Each(func(index int, item *goquery.Selection) {
+		linkTag := item
+		link, _ := linkTag.Attr("href")
+		linkText := linkTag.Text()
+		linkText = SpaceMap(linkText)
+		bbb := CUrl{Origin: link, Context: linkText}
+		hrefArray = append(hrefArray, bbb)
+	})
+	return hrefArray
+}
+
+func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
+
+	for i := 0; i < len(a); i++ {
+		ha := a[i].Origin
+
+		//引用为路径则拼接为完整url
+		if ReHaveSlash(ha) || ReIsLink(ha) {
+			a[i].Origin = ha
+			if ReHaveSlash(ha) {
+				a[i].CrawlUrl = StitchUrl(cU.Domain, ha)
+			} else {
+				a[i].CrawlUrl = ha
+			}
+			a[i].RefUrl = cU.CrawlUrl
+			//如果拼接符合url正则且不在Map内的的放入channel和Map
+			if ReIsLink(a[i].CrawlUrl) && tM[a[i].CrawlUrl] == 0 {
+				UrlToChMAP(a[i], cH, tM)
+			} else {
+				a[i].Origin = ha
+				log.Println("ErrorUrl		" + a[i].CrawlUrl)
+			}
+		} else {
+			log.Print("ErrorPath			" + ha)
+		}
+	}
+}
+
+func DailyCheck() {
+	type Item struct {
+		CrawlUrl    string    `bson:"crawl_url"`
+		RefUrl      string    `json:"RefUrl" bson:"ref_url"`
+		StatusCode  int       `json:"StatusCode" bson:"status_code"`
+		Context     string    `json:"Context" bson:"context"`
+		ContentType string    `json:"ContentType" bson:"content_type"`
+		updateAt    time.Time `json:"-" bson:"update_at"`
+		QueryError  string    `json:"QueryError" bson:"query_error"`
+	}
+	item := Item{}
+	items := GetIterUrl()
+	for items.Next(&item) {
+		url := item.CrawlUrl
+		ResponseBodyString, StatusCode, _ := Crawling(url)
+
+		fmt.Println("\n")
+		fmt.Println(url)
+		fmt.Println(item.RefUrl)
+		fmt.Println(StatusCode)
+		if StatusCode == -2 {
+			fmt.Println(ResponseBodyString)
+		}
+		fmt.Println("\n\n----------------------------------------------")
+
+	}
+}
+
+func LanuchCrawl() {
+
+	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
+
+	var executeChannel = make(chan CUrl, 5000)
+	var trailMap = make(map[string]int)
+	var finishArray = make([]CUrl, 0, 10000)
+	var errorArryay = make([]CUrl, 0, 1000)
+
+	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
+	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[1]}
+	//将根域名放入channel
+	PutChannel(firCrawl, executeChannel)
+	PutChannel(secCrawl, executeChannel)
+
+	for len(executeChannel) > 0 {
+		aimUrl := GetChannel(executeChannel)
+		if aimUrl.CrawlUrl != "close" {
+			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
+			fmt.Println(len(executeChannel))
+		}
+	}
+
+	for i := 0; i < len(finishArray); i++ {
+		fmt.Println(finishArray[i])
+		err := finishArray[i].Insert()
+		if err != nil {
+			if err.Error()[:6] == `E11000` {
+				err := finishArray[i].Update()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+			log.Println(err)
+		}
+	}
+
+	log.Println("/n url num is %d/n", len(finishArray))
+
+	for i := 0; i < len(errorArryay); i++ {
+		if errorArryay[i].StatusCode != 0 {
+			fmt.Println(errorArryay[i].CrawlUrl)
+			fmt.Println(errorArryay[i].RefUrl)
+			fmt.Println(errorArryay[i].StatusCode)
+			fmt.Println(errorArryay[i].Context)
+			fmt.Println(errorArryay[i].QueryError)
+			fmt.Println("\n")
+		}
+	}
 }

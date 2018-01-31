@@ -1,6 +1,7 @@
 package check_link
 
 import (
+	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -45,6 +46,7 @@ type CUrl struct {
 	ContentType string        `json:"ContentType" bson:"content_type"`
 	updateAt    time.Time     `json:"-" bson:"update_at"`
 	QueryError  string        `json:"QueryError" bson:"query_error"`
+	Context     string        `json:"Context" bson:"context"`
 }
 
 func (cu *CUrl) Insert() error {
@@ -68,6 +70,7 @@ func (cu *CUrl) Update() error {
 
 	selector := bson.M{"crawl_url": cu.CrawlUrl}
 	data := bson.M{
+		"crawl_url":    cu.CrawlUrl,
 		"status_code":  cu.StatusCode,
 		"origin":       cu.Origin,
 		"domain":       cu.Domain,
@@ -75,6 +78,7 @@ func (cu *CUrl) Update() error {
 		"content_type": cu.ContentType,
 		"update_at":    time.Now(),
 		"query_error":  cu.QueryError,
+		"context":      cu.Context,
 	}
 	return c.Update(selector, data)
 
@@ -84,7 +88,15 @@ func (cu *CUrl) Update() error {
 func GetIterUrl() *mgo.Iter {
 	session := Session()
 	c := session.DB(DB).C(CheckUrl)
-	find := c.Find(bson.M{}).Select(bson.M{"crawl_url": 1, "ref_url": 1})
+	find := c.Find(bson.M{}).Select(bson.M{
+		"crawl_url":    1,
+		"ref_url":      1,
+		"status_code":  1,
+		"context":      1,
+		"query_error":  1,
+		"update_at":    1,
+		"content_type": 1,
+	})
 	items := find.Iter()
 	return items
 
