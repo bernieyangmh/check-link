@@ -3,6 +3,7 @@ package check_link
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"fmt"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -187,8 +187,13 @@ func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 
 func DailyCheck() {
 	type Item struct {
-		CrawlUrl string `bson:"crawl_url"`
-		RefUrl   string `json:"RefUrl" bson:"ref_url"`
+		CrawlUrl    string    `bson:"crawl_url"`
+		RefUrl      string    `json:"RefUrl" bson:"ref_url"`
+		StatusCode  int       `json:"StatusCode" bson:"status_code"`
+		Context     string    `json:"Context" bson:"context"`
+		ContentType string    `json:"ContentType" bson:"content_type"`
+		updateAt    time.Time `json:"-" bson:"update_at"`
+		QueryError  string    `json:"QueryError" bson:"query_error"`
 	}
 	item := Item{}
 	items := GetIterUrl()
@@ -207,8 +212,6 @@ func DailyCheck() {
 
 	}
 }
-
-
 
 func LanuchCrawl() {
 
@@ -237,8 +240,13 @@ func LanuchCrawl() {
 		fmt.Println(finishArray[i])
 		err := finishArray[i].Insert()
 		if err != nil {
+			if err.Error()[:6] == `E11000` {
+				err := finishArray[i].Update()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 			log.Println(err)
-
 		}
 	}
 

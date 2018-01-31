@@ -1,7 +1,6 @@
 package check_link
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -38,7 +37,6 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	if cu.StatusCode != 200 {
 		*eA = append(*eA, cu)
 	}
-
 
 	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
 	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
@@ -126,7 +124,3 @@ func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
 	}
 	return "xxxnohtml", resp.StatusCode, resp.Header.Get("Content-Type")
 }
-
-
-
-
