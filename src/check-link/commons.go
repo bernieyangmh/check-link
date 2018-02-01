@@ -254,11 +254,11 @@ func LanuchCrawl() {
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
-			fmt.Println(errorArryay[i].CrawlUrl)
-			fmt.Println(errorArryay[i].RefUrl)
+			fmt.Println("错误链接		" + errorArryay[i].CrawlUrl)
+			fmt.Println("引用链接		" + errorArryay[i].RefUrl)
 			fmt.Println(errorArryay[i].StatusCode)
-			fmt.Println(errorArryay[i].Context)
-			fmt.Println(errorArryay[i].QueryError)
+			fmt.Println("链接内容		" + errorArryay[i].Context)
+			fmt.Println("访问报错		" + errorArryay[i].QueryError)
 			fmt.Println("\n")
 		}
 	}
