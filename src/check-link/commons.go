@@ -2,6 +2,7 @@ package check_link
 
 import (
 	"bytes"
+	"github.com/gin-gonic/gin/json"
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"net/http"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -255,11 +257,27 @@ func LanuchCrawl() {
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
 			fmt.Println("错误链接		" + errorArryay[i].CrawlUrl)
+
 			fmt.Println("引用链接		" + errorArryay[i].RefUrl)
+
 			fmt.Println(errorArryay[i].StatusCode)
+
 			fmt.Println("链接内容		" + errorArryay[i].Context)
+
 			fmt.Println("访问报错		" + errorArryay[i].QueryError)
+
 			fmt.Println("\n")
 		}
 	}
+
+
+	post_json, _ := json.Marshal(errorArryay)
+	fmt.Println(post_json)
+	resp, err := http.Post("http://127.0.0.1:8088/api/check_website", "application/json", bytes.NewBuffer(post_json))
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(resp)
+
+	}
+
 }
