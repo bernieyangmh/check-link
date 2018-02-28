@@ -3,12 +3,13 @@ package check_link
 import "regexp"
 
 const (
-	PATTERN_SRC   = `src=\"(.*?)\"`
-	PATTERN_HERF  = `href=\"(.*?)\"`
-	PATTERN_HTTP  = `^http(.*?)`
-	PATTERN_LINK  = `^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
-	PATTERN_SLASH = `^/(.*?)`
-	ALLOW_DOMAIN  = `(qiniu.com)|(qiniu.com.cn)`
+	PATTERN_SRC          = `src=\"(.*?)\"`
+	PATTERN_HERF         = `href=\"(.*?)\"`
+	PATTERN_HTTP         = `^http(.*?)`
+	PATTERN_LINK         = `^https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)`
+	PATTERN_SINGLE_SLASH = `^/([^/].*)?$`
+	PATTERN_MORE_SLASH   = `^//(.*?)`
+	ALLOW_DOMAIN         = `(qiniu.com)|(qiniu.com.cn)`
 )
 
 //返回匹配href=的相对路径数组
@@ -61,9 +62,18 @@ func ReIsLink(s string) bool {
 
 }
 
-//re匹配slasp
-func ReHaveSlash(s string) bool {
-	reSlash, _ := regexp.Compile(PATTERN_SLASH)
+//re匹配单个slash
+func ReHaveSinlgeSlash(s string) bool {
+	reSlash, _ := regexp.Compile(PATTERN_SINGLE_SLASH)
+	a := reSlash.MatchString(s)
+
+	return a
+
+}
+
+//匹配多个slash
+func ReHaveMoreSlash(s string) bool {
+	reSlash, _ := regexp.Compile(PATTERN_MORE_SLASH)
 	a := reSlash.MatchString(s)
 
 	return a

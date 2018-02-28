@@ -2,17 +2,17 @@ package check_link
 
 import (
 	"bytes"
-	"github.com/gin-gonic/gin/json"
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/gin-gonic/gin/json"
 	"golang.org/x/net/html"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
 	"unicode"
-	"net/http"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -42,9 +42,9 @@ func ReArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
-		if ReHaveSlash(ha) || ReIsLink(ha) {
+		if ReHaveSinlgeSlash(ha) || ReIsLink(ha) {
 			unitCurl.Origin = ha
-			if ReHaveSlash(ha) {
+			if ReHaveSinlgeSlash(ha) {
 				unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
 			} else {
 				unitCurl.CrawlUrl = ha
@@ -166,14 +166,36 @@ func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 		ha := a[i].Origin
 
 		//引用为路径则拼接为完整url
-		if ReHaveSlash(ha) || ReIsLink(ha) {
-			a[i].Origin = ha
-			if ReHaveSlash(ha) {
+		if ReHaveSinlgeSlash(ha) || ReIsLink(ha) || ReHaveMoreSlash(ha) {
+			//单个/,合成绝对路径
+			if ReHaveSinlgeSlash(ha) {
 				a[i].CrawlUrl = StitchUrl(cU.Domain, ha)
-			} else {
+			}
+			//引用为绝对路径,直接赋值
+			if ReIsLink(ha) {
 				a[i].CrawlUrl = ha
 			}
-			a[i].RefUrl = cU.CrawlUrl
+
+			//拿到链接所属链接的协议，与//形式的相对链接合成新链接
+			if ReHaveMoreSlash(ha) {
+				pu, err := url.Parse(cU.Domain)
+				if err != nil {
+					log.Println(err)
+				}
+
+				var resUrlBuffer bytes.Buffer
+				resUrlBuffer.WriteString(pu.Scheme)
+				resUrlBuffer.WriteString("://")
+				resUrlBuffer.WriteString(ha[2:])
+
+				a[i].CrawlUrl = resUrlBuffer.String()
+			}
+			if cU.CrawlUrl != "" {
+				a[i].RefUrl = cU.CrawlUrl
+			} else {
+				log.Print("Nil CrawlUrl!")
+			}
+
 			//如果拼接符合url正则且不在Map内的的放入channel和Map
 			if ReIsLink(a[i].CrawlUrl) && tM[a[i].CrawlUrl] == 0 {
 				UrlToChMAP(a[i], cH, tM)
@@ -269,7 +291,6 @@ func LanuchCrawl() {
 			fmt.Println("\n")
 		}
 	}
-
 
 	post_json, _ := json.Marshal(errorArryay)
 	fmt.Println(post_json)
