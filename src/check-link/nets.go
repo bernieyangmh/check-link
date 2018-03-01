@@ -50,23 +50,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	var respBody string
 
-	log.Println("Head		" + surl)
-	resp, err := http.Head(surl)
+	log.Println("GET		" + surl)
+	resp, err := http.Get(surl)
 	if err != nil {
 		log.Print(err)
-	}
-	if resp == nil {
-		return err.Error(), -2, "error"
-	}
-
-	//链接不允许HEAD方法或直接关闭链接，换用Get
-	if resp == nil || resp.StatusCode == 405 {
-		log.Println("GetForNoHead		" + surl)
-		resp, err = http.Get(surl)
-		if err != nil {
-			log.Println(err)
-		}
-
 	}
 	if resp == nil {
 		return err.Error(), -2, "error"
