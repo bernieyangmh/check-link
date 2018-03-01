@@ -42,14 +42,39 @@ func ReArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
-		if ReHaveSinlgeSlash(ha) || ReIsLink(ha) {
+		if ReHaveSinlgeSlash(ha) || ReIsLink(ha) || ReHaveMoreSlash(ha) {
 			unitCurl.Origin = ha
 			if ReHaveSinlgeSlash(ha) {
 				unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
-			} else {
+			}
+
+			//引用为绝对路径,直接赋值
+			if ReIsLink(ha) {
 				unitCurl.CrawlUrl = ha
 			}
-			unitCurl.RefUrl = cU.CrawlUrl
+
+
+			//拿到链接所属链接的协议，与//形式的相对链接合成新链接
+			if ReHaveMoreSlash(ha) {
+				pu, err := url.Parse(cU.Domain)
+				if err != nil {
+					log.Println(err)
+				}
+
+				var resUrlBuffer bytes.Buffer
+				resUrlBuffer.WriteString(pu.Scheme)
+				resUrlBuffer.WriteString("://")
+				resUrlBuffer.WriteString(ha[2:])
+
+				unitCurl.CrawlUrl = resUrlBuffer.String()
+			}
+
+			if cU.CrawlUrl != "" {
+				unitCurl.RefUrl = cU.CrawlUrl
+			} else {
+				log.Print("Nil CrawlUrl!")
+			}
+
 			//如果拼接符合url正则且不在Map内的的放入channel和Map
 			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0 {
 				UrlToChMAP(unitCurl, cH, tM)
