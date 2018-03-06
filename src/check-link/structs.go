@@ -1,36 +1,11 @@
 package check_link
 
 import (
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
 	"time"
 )
 
-var (
-	MongoSession, err = mgo.Dial("127.0.0.1")
-	DB                = "worktest"
-	CheckUrl          = "check_url"
-)
 
-func init() {
-	//group coll
-	crawlurlIndex := mgo.Index{
-		Key:        []string{"crawl_url"},
-		Unique:     true,
-		DropDups:   true,
-		Background: true, // See notes.
-		Sparse:     false,
-	}
-	err := MongoSession.DB(DB).C(CheckUrl).EnsureIndex(crawlurlIndex)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func Session() *mgo.Session {
-	return MongoSession.Copy()
-}
 
 //-1		链接放入管道未爬取
 //-2		http请求报错
@@ -48,55 +23,3 @@ type CUrl struct {
 	Context     string        `json:"Context" bson:"context"`
 }
 
-func (cu *CUrl) Insert() error {
-
-	session := Session()
-	defer session.Close()
-	c := session.DB(DB).C(CheckUrl)
-	cu.Id = bson.NewObjectId()
-	cu.updateAt = time.Now()
-
-	return c.Insert(cu)
-
-}
-
-func (cu *CUrl) Update() error {
-	log.Print("Update mongo		" + cu.CrawlUrl)
-
-	session := Session()
-	defer session.Close()
-	c := session.DB(DB).C(CheckUrl)
-
-	selector := bson.M{"crawl_url": cu.CrawlUrl}
-	data := bson.M{
-		"crawl_url":    cu.CrawlUrl,
-		"status_code":  cu.StatusCode,
-		"origin":       cu.Origin,
-		"domain":       cu.Domain,
-		"ref_url":      cu.RefUrl,
-		"content_type": cu.ContentType,
-		"update_at":    time.Now(),
-		"query_error":  cu.QueryError,
-		"context":      cu.Context,
-	}
-	return c.Update(selector, data)
-
-}
-
-//todo 不直接返回，抽象出来
-func GetIterUrl() *mgo.Iter {
-	session := Session()
-	c := session.DB(DB).C(CheckUrl)
-	find := c.Find(bson.M{}).Select(bson.M{
-		"crawl_url":    1,
-		"ref_url":      1,
-		"status_code":  1,
-		"context":      1,
-		"query_error":  1,
-		"update_at":    1,
-		"content_type": 1,
-	})
-	items := find.Iter()
-	return items
-
-}

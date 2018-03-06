@@ -17,7 +17,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 
 	respBody, StatusCode, ContentType := Crawling(cu.CrawlUrl)
 
-	//爬过的链接放入trailMap
+	//爬过的链接放入trailMap,避免重复检查
 	tM[cu.CrawlUrl] = StatusCode
 
 	cu.StatusCode = StatusCode
@@ -25,10 +25,13 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	cu.Domain = s_domain
 
 	*fA = append(*fA, cu)
+
+	//如果访问异常,QueryError为相关响应记录下来
 	if cu.StatusCode == -2 {
 		cu.QueryError = respBody
 	}
 
+	//错误链接放入errorArryay
 	if cu.StatusCode != 200 {
 		*eA = append(*eA, cu)
 	}
@@ -47,23 +50,10 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	var respBody string
 
-	log.Println("Head		" + surl)
-	resp, err := http.Head(surl)
+	log.Println("GET		" + surl)
+	resp, err := http.Get(surl)
 	if err != nil {
 		log.Print(err)
-	}
-	if resp == nil {
-		return err.Error(), -2, "error"
-	}
-
-	//链接不允许HEAD方法或直接关闭链接，换用Get
-	if resp == nil || resp.StatusCode == 405 {
-		log.Println("GetForNoHead		" + surl)
-		resp, err = http.Get(surl)
-		if err != nil {
-			log.Println(err)
-		}
-
 	}
 	if resp == nil {
 		return err.Error(), -2, "error"
@@ -72,6 +62,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
+	//如果3xx跳转，检查跳转是否正常
 	if 301 == resp.StatusCode || resp.StatusCode == 302 {
 
 		lurl := GetUrlFromLocation(*resp)
@@ -79,6 +70,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		respBody, respstatusCode, respContentType = GetFromRedirectUrl(lurl, 1)
 	}
 
+	//如果响应类型为html文件，获取其body
 	if respContentType == "text/html; charset=utf-8" {
 		log.Println("GetForBoby		" + surl)
 		resp, err = http.Get(surl)
