@@ -243,7 +243,7 @@ func ReadJsonConfig(tm map[string]int) {
 
 	raw, err := ioutil.ReadFile("./config.json")
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		os.Exit(1)
 	}
 
@@ -254,34 +254,6 @@ func ReadJsonConfig(tm map[string]int) {
 		tm[c.WhiteLink[i]] = 1
 	}
 
-}
-
-func DailyCheck() {
-	type Item struct {
-		CrawlUrl    string    `bson:"crawl_url"`
-		RefUrl      string    `json:"RefUrl" bson:"ref_url"`
-		StatusCode  int       `json:"StatusCode" bson:"status_code"`
-		Context     string    `json:"Context" bson:"context"`
-		ContentType string    `json:"ContentType" bson:"content_type"`
-		updateAt    time.Time `json:"-" bson:"update_at"`
-		QueryError  string    `json:"QueryError" bson:"query_error"`
-	}
-	item := Item{}
-	items := GetIterUrl()
-	for items.Next(&item) {
-		url := item.CrawlUrl
-		ResponseBodyString, StatusCode, _ := Crawling(url)
-
-		fmt.Println("\n")
-		fmt.Println(url)
-		fmt.Println(item.RefUrl)
-		fmt.Println(StatusCode)
-		if StatusCode == -2 {
-			fmt.Println(ResponseBodyString)
-		}
-		fmt.Println("\n\n----------------------------------------------")
-
-	}
 }
 
 func LanuchCrawl() {
@@ -299,8 +271,8 @@ func LanuchCrawl() {
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
 
+	//读取配置文件
 	ReadJsonConfig(trailMap)
-
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)

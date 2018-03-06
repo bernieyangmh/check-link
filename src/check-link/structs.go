@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-
-
 //-1		链接放入管道未爬取
 //-2		http请求报错
 //-3		读取管道超时，一般为没有新链接放入管道，自动结束
@@ -22,4 +20,3 @@ type CUrl struct {
 	QueryError  string        `json:"QueryError" bson:"query_error"`
 	Context     string        `json:"Context" bson:"context"`
 }
-
