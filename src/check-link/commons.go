@@ -5,14 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/gin-gonic/gin/json"
+	"encoding/json"
 	"golang.org/x/net/html"
+	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 	"unicode"
+	"net/http"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -52,7 +54,6 @@ func ReArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 			if ReIsLink(ha) {
 				unitCurl.CrawlUrl = ha
 			}
-
 
 			//拿到链接所属链接的协议，与//形式的相对链接合成新链接
 			if ReHaveMoreSlash(ha) {
@@ -234,6 +235,29 @@ func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 	}
 }
 
+type ConfigJson struct {
+	WhiteLink []string `json:"WhiteLink"`
+}
+
+//从配置文件中读取配置项并配置
+func ReadJsonConfig(tm map[string]int) {
+
+	raw, err := ioutil.ReadFile("./config.json")
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	var c ConfigJson
+	json.Unmarshal(raw, &c)
+
+	for i := 0; i < len(c.WhiteLink); i++ {
+		tm[c.WhiteLink[i]] = 1
+	}
+
+}
+
+//日常检查
 func DailyCheck() {
 	type Item struct {
 		CrawlUrl    string    `bson:"crawl_url"`
@@ -262,6 +286,7 @@ func DailyCheck() {
 	}
 }
 
+//爬取,检查,更新
 func LanuchCrawl() {
 
 	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
@@ -276,6 +301,10 @@ func LanuchCrawl() {
 	//将根域名放入channel
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
+
+	ReadJsonConfig(trailMap)
+
+
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
