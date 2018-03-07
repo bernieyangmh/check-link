@@ -2,19 +2,22 @@ package check_link
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"encoding/json"
 	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 	"unicode"
-	"net/http"
+	"strconv"
+	"github.com/qiniu/rpc.v1"
+	"qbox.us/api/message"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -257,33 +260,30 @@ func ReadJsonConfig(tm map[string]int) {
 
 }
 
-//日常检查
-func DailyCheck() {
-	type Item struct {
-		CrawlUrl    string    `bson:"crawl_url"`
-		RefUrl      string    `json:"RefUrl" bson:"ref_url"`
-		StatusCode  int       `json:"StatusCode" bson:"status_code"`
-		Context     string    `json:"Context" bson:"context"`
-		ContentType string    `json:"ContentType" bson:"content_type"`
-		updateAt    time.Time `json:"-" bson:"update_at"`
-		QueryError  string    `json:"QueryError" bson:"query_error"`
-	}
-	item := Item{}
-	items := GetIterUrl()
-	for items.Next(&item) {
-		url := item.CrawlUrl
-		ResponseBodyString, StatusCode, _ := Crawling(url)
+type Transport struct {
+	Transport http.RoundTripper
+}
 
-		fmt.Println("\n")
-		fmt.Println(url)
-		fmt.Println(item.RefUrl)
-		fmt.Println(StatusCode)
-		if StatusCode == -2 {
-			fmt.Println(ResponseBodyString)
-		}
-		fmt.Println("\n\n----------------------------------------------")
+func NewTransport(transport http.RoundTripper) *Transport {
 
+	if transport == nil {
+		transport = http.DefaultTransport
 	}
+
+	return &Transport{Transport: transport}
+}
+
+//发送邮件
+func SendMail(uid uint32, to []string, subject string, content string) (oid string, err error) {
+
+	cli := &rpc.Client{&http.Client{Transport: NewTransport(nil)}}
+	nf := message.NewHandleNotification("https://morse.qiniu.io", cli)
+
+	mailIn := message.SendMailIn{Uid: uid, To: to, Subject: subject, Content: content}
+	mailOut, err := nf.SendMail(nil, mailIn)
+	oid = mailOut.Oid
+
+	return
 }
 
 //爬取,检查,更新
@@ -302,9 +302,8 @@ func LanuchCrawl() {
 	PutChannel(firCrawl, executeChannel)
 	PutChannel(secCrawl, executeChannel)
 
+	//读取配置文件
 	ReadJsonConfig(trailMap)
-
-
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
@@ -346,13 +345,32 @@ func LanuchCrawl() {
 		}
 	}
 
-	post_json, _ := json.Marshal(errorArryay)
-	fmt.Println(post_json)
-	resp, err := http.Post("http://127.0.0.1:8088/api/check_website", "application/json", bytes.NewBuffer(post_json))
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println(resp)
+	var emailTable bytes.Buffer
 
+	emailTable.WriteString("<html><body><table><tr><td>问题链接<td><td>状态码<td><td>原引用链接<td><td>链接内容<td><td>报错信息<td></tr>")
+	for _, ic :=range errorArryay {
+
+		emailTable.WriteString(`<tr><td>`)
+		emailTable.WriteString(ic.CrawlUrl)
+		emailTable.WriteString(`<td><td>`)
+		emailTable.WriteString(strconv.Itoa(ic.StatusCode))
+		emailTable.WriteString(`<td><td>`)
+		emailTable.WriteString(ic.RefUrl)
+		emailTable.WriteString(`<td><td>`)
+		emailTable.WriteString(ic.Context)
+		emailTable.WriteString(`<td><td>`)
+		emailTable.WriteString(ic.QueryError)
+		emailTable.WriteString(`<td></tr>`)
 	}
+	emailTable.WriteString(`</table></body></html>`)
+
+	fmt.Println(emailTable.String())
+
+	to := []string{"yangminghui@qiniu.com"}
+	oid, err := SendMail(123, to, "七牛网站扫描结果", emailTable.String())
+	if err != nil{
+		fmt.Println(oid)
+	}
+
 
 }
