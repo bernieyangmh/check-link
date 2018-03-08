@@ -264,6 +264,11 @@ type Transport struct {
 	Transport http.RoundTripper
 }
 
+func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	req.Header.Set("Client-Id", "xxxxxxxxxxxxxx")
+	return t.Transport.RoundTrip(req)
+}
+
 func NewTransport(transport http.RoundTripper) *Transport {
 
 	if transport == nil {
@@ -305,7 +310,7 @@ func LanuchCrawl() {
 	//读取配置文件
 	ReadJsonConfig(trailMap)
 
-	for len(executeChannel) > 0 {
+	for len(executeChannel) < 100 {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
 			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
