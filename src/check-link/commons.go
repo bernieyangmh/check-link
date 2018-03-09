@@ -234,6 +234,21 @@ func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 	}
 }
 
+func StatAndCreate(p string) error {
+	_, err := os.Stat(p)
+	if err != nil {
+		_, err := os.Create(p)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = os.Stat(p)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+	return err
+}
+
 type ConfigJson struct {
 	WhiteLink []string `json:"WhiteLink"`
 }
@@ -283,6 +298,11 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 
 	log.Println("/n url num is %d/n", len(finishArray))
 
+	err := StatAndCreate(rp)
+	if err != nil {
+		log.Println(err)
+	}
+
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
 			fmt.Println("错误链接		" + errorArryay[i].CrawlUrl)
@@ -293,4 +313,5 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 			fmt.Println("\n")
 		}
 	}
+
 }

@@ -35,19 +35,15 @@ func main() {
 		}
 	}
 
-	_, err := os.Stat(logPath)
+	err := check_link.StatAndCreate(logPath)
 	if err != nil {
-		_, err := os.Create(logPath)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		_, err = os.Stat(logPath)
-		if err != nil {
-			log.Fatalln(err)
-		}
+		log.Println(err)
 	}
 
 	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Println(err)
+	}
 	stdoutAndFile := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(stdoutAndFile)
 
