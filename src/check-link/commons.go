@@ -303,14 +303,19 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 		log.Println(err)
 	}
 
+	resFile, err := os.OpenFile(rp, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		log.Println(err)
+	}
+
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
-			fmt.Println("错误链接		" + errorArryay[i].CrawlUrl)
-			fmt.Println("引用链接		" + errorArryay[i].RefUrl)
-			fmt.Println(errorArryay[i].StatusCode)
-			fmt.Println("链接内容		" + errorArryay[i].Context)
-			fmt.Println("访问报错		" + errorArryay[i].QueryError)
-			fmt.Println("\n")
+			resFile.WriteString("错误链接		" + errorArryay[i].CrawlUrl)
+			resFile.WriteString("\n引用链接		" + errorArryay[i].RefUrl)
+			resFile.WriteString(fmt.Sprintf("\n%d\n", errorArryay[i].StatusCode))
+			resFile.WriteString("\n链接内容		" + errorArryay[i].Context)
+			resFile.WriteString("\n访问报错		" + errorArryay[i].QueryError)
+			resFile.WriteString("\n")
 		}
 	}
 
