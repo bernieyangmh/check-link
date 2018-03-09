@@ -18,5 +18,4 @@ type CUrl struct {
 	ContentType string        `json:"ContentType" bson:"content_type"`
 	updateAt    time.Time     `json:"-" bson:"update_at"`
 	QueryError  string        `json:"QueryError" bson:"query_error"`
-	Context     string        `json:"Context" bson:"context"`
 }

@@ -98,9 +98,9 @@ func UrlToChMAP(cu CUrl, ch chan<- CUrl, tm map[string]int) {
 }
 
 //从body里拿到href和src的相对路径
-func ExtractBody(s string) ([]CUrl, [][]string) {
+func ExtractBody(s string) ([][]string, [][]string) {
 
-	hrefArray := GetHerfFromHtml(s)
+	hrefArray := ReHrefSubMatch(s)
 	srcArray := ReSrcSubMatch(s)
 	return hrefArray, srcArray
 }
@@ -161,44 +161,47 @@ func SpaceMap(str string) string {
 }
 
 //解析body拿到href链接及文本dom内容
-func GetHerfFromHtml(s string) []CUrl {
-	hrefArray := make([]CUrl, 0)
+//func GetHerfFromHtml(s string) []CUrl {
+//	hrefArray := make([]CUrl, 0)
+//
+//	node, err := html.Parse(strings.NewReader(s))
+//	if err != nil {
+//		log.Print(err)
+//	}
+//	doc := goquery.NewDocumentFromNode(node)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	// Find the review items
+//	doc.Find("html a").Each(func(index int, item *goquery.Selection) {
+//		linkTag := item
+//		link, _ := linkTag.Attr("href")
+//		linkText := linkTag.Text()
+//		linkText = SpaceMap(linkText)
+//		bbb := CUrl{Origin: link, Context: linkText}
+//		hrefArray = append(hrefArray, bbb)
+//	})
+//	return hrefArray
+//}
 
-	node, err := html.Parse(strings.NewReader(s))
-	if err != nil {
-		log.Print(err)
-	}
-	doc := goquery.NewDocumentFromNode(node)
-	if err != nil {
-		log.Fatal(err)
-	}
+func DomArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 
-	// Find the review items
-	doc.Find("html a").Each(func(index int, item *goquery.Selection) {
-		linkTag := item
-		link, _ := linkTag.Attr("href")
-		linkText := linkTag.Text()
-		linkText = SpaceMap(linkText)
-		bbb := CUrl{Origin: link, Context: linkText}
-		hrefArray = append(hrefArray, bbb)
-	})
-	return hrefArray
-}
-
-func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
-
+	var unitCurl CUrl
 	for i := 0; i < len(a); i++ {
-		ha := a[i].Origin
+		ha := a[i][1]
 
 		//引用为路径则拼接为完整url
 		if ReHaveSinlgeSlash(ha) || ReIsLink(ha) || ReHaveMoreSlash(ha) {
 			//单个/,合成绝对路径
 			if ReHaveSinlgeSlash(ha) {
-				a[i].CrawlUrl = StitchUrl(cU.Domain, ha)
+				unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+				unitCurl.CrawlUrl = StitchUrl(cU.Domain, ha)
+
 			}
 			//引用为绝对路径,直接赋值
 			if ReIsLink(ha) {
-				a[i].CrawlUrl = ha
+				unitCurl.CrawlUrl = ha
 			}
 
 			//拿到链接所属链接的协议，与//形式的相对链接合成新链接
@@ -213,20 +216,20 @@ func DomArrayToUrl(cU CUrl, a []CUrl, cH chan<- CUrl, tM map[string]int) {
 				resUrlBuffer.WriteString("://")
 				resUrlBuffer.WriteString(ha[2:])
 
-				a[i].CrawlUrl = resUrlBuffer.String()
+				unitCurl.CrawlUrl = resUrlBuffer.String()
 			}
 			if cU.CrawlUrl != "" {
-				a[i].RefUrl = cU.CrawlUrl
+				unitCurl.RefUrl = cU.CrawlUrl
 			} else {
 				log.Print("Nil CrawlUrl!")
 			}
 
 			//如果拼接符合url正则且不在Map内的的放入channel和Map
-			if ReIsLink(a[i].CrawlUrl) && tM[a[i].CrawlUrl] == 0 {
-				UrlToChMAP(a[i], cH, tM)
+			if ReIsLink(unitCurl.CrawlUrl) && tM[unitCurl.CrawlUrl] == 0 {
+				UrlToChMAP(unitCurl, cH, tM)
 			} else {
-				a[i].Origin = ha
-				log.Println("ErrorUrl		" + a[i].CrawlUrl)
+				unitCurl.Origin = ha
+				log.Println("ErrorUrl		" + unitCurl.CrawlUrl)
 			}
 		} else {
 			log.Print("ErrorPath			" + ha)
@@ -313,7 +316,6 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 			resFile.WriteString("错误链接		" + errorArryay[i].CrawlUrl)
 			resFile.WriteString("\n引用链接		" + errorArryay[i].RefUrl)
 			resFile.WriteString(fmt.Sprintf("\n%d\n", errorArryay[i].StatusCode))
-			resFile.WriteString("\n链接内容		" + errorArryay[i].Context)
 			resFile.WriteString("\n访问报错		" + errorArryay[i].QueryError)
 			resFile.WriteString("\n")
 		}
