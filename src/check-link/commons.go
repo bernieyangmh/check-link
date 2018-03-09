@@ -265,10 +265,9 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 	var finishArray = make([]CUrl, 0, 10000)
 	var errorArryay = make([]CUrl, 0, 1000)
 
-
 	//将指定域名放入channel
-	for i:=0;i<len(ROOT_DOMAIN);i++{
-		PutChannel(CUrl{CrawlUrl: ROOT_DOMAIN[i]},executeChannel)
+	for i := 0; i < len(ROOT_DOMAIN); i++ {
+		PutChannel(CUrl{CrawlUrl: ROOT_DOMAIN[i]}, executeChannel)
 	}
 
 	//读取配置文件

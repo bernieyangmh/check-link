@@ -2,6 +2,7 @@ package main
 
 import (
 	"check-link"
+	"io"
 	"log"
 	"os"
 )
@@ -13,16 +14,14 @@ func main() {
 	var logPath string
 	var resultPath string
 
-
-
-	for i:=0;i<len(os.Args);i++{
+	for i := 0; i < len(os.Args); i++ {
 		switch os.Args[i] {
 
 		case "-o":
-			for os.Args[i+1][0] != '-'{
+			for os.Args[i+1][0] != '-' {
 				rootLinkArray = append(rootLinkArray, os.Args[i+1])
-				if i < len(os.Args)-2{
-					i++;
+				if i < len(os.Args)-2 {
+					i++
 				} else {
 					break
 				}
@@ -30,12 +29,29 @@ func main() {
 		case "-l":
 			logPath = os.Args[i+1]
 
-
 		case "-r":
 			resultPath = os.Args[i+1]
 
 		}
 	}
+
+	_, err := os.Stat(logPath)
+	if err != nil {
+		_, err := os.Create(logPath)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = os.Stat(logPath)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	logFile, err := os.OpenFile(logPath, os.O_RDWR|os.O_CREATE, 0755)
+	stdoutAndFile := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(stdoutAndFile)
+
+	defer logFile.Close()
 
 	check_link.LanuchCrawl(rootLinkArray, logPath, resultPath)
 }
