@@ -256,9 +256,9 @@ func ReadJsonConfig(tm map[string]int) {
 
 }
 
-func LanuchCrawl() {
+func LanuchCrawl(rla []string, lp string, rp string) {
 
-	var ROOT_DOMAIN = [2]string{"https://www.qiniu.com", "https://developer.qiniu.com"}
+	var ROOT_DOMAIN = rla
 
 	var executeChannel = make(chan CUrl, 5000)
 	var trailMap = make(map[string]int)
