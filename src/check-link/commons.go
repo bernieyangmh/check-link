@@ -265,11 +265,11 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 	var finishArray = make([]CUrl, 0, 10000)
 	var errorArryay = make([]CUrl, 0, 1000)
 
-	firCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[0]}
-	secCrawl := CUrl{CrawlUrl: ROOT_DOMAIN[1]}
-	//将根域名放入channel
-	PutChannel(firCrawl, executeChannel)
-	PutChannel(secCrawl, executeChannel)
+
+	//将指定域名放入channel
+	for i:=0;i<len(ROOT_DOMAIN);i++{
+		PutChannel(CUrl{CrawlUrl: ROOT_DOMAIN[i]},executeChannel)
+	}
 
 	//读取配置文件
 	ReadJsonConfig(trailMap)
