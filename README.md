@@ -12,22 +12,9 @@ $ checklink -o https://www.google.com https://www.facebook.com -l /home/user/log
 -l log path
 -r result path
 ```
-### Meaning of log argument
 
-| log title      |    Meaning  |
-| --------: | :-- |
-| aimUrl      |    start to check the url  |
-| GET  | GET method  |
-| CorrectlyRedict     |   redict is correctly	  |
-| ErrorUrl      |already in map use for avoiding duplicate or is not correct url |
-| ErrorPath      |   wrong path  |
-| Nil CrawlUrl      |    the contexts from href and src not match correct link |
-| put      |   put the url into channel |
-| url num is xxx      |    Total number of links  |
-
-
-### example 
-#### running log
+### Example 
+#### Running log
 ```
 2018/03/07 09:14:10 commons.go:83: ErrorUrl		https://www.xxxx.com/aaa/7fabd3a1c59a9e76a8b71df63efdbfbfef1.png
 2018/03/07 09:14:10 commons.go:83: ErrorUrl		https://www.xxxx.com/aaa/cc5a42b9338006dd1a26e4730e5e1e.png
@@ -49,6 +36,20 @@ $ checklink -o https://www.google.com https://www.facebook.com -l /home/user/log
 2018/03/07 09:14:11 commons.go:229: ErrorUrl		https://www.xxxx.com/aaa/why
 2018/03/07 09:14:11 commons.go:229: ErrorUrl		https://www.qiniu.com/aaa/when
 ```
+
+#### Meaning of log argument
+
+| log title      |    Meaning  |
+| --------: | :-- |
+| aimUrl      |    start to check the url  |
+| GET  | GET method  |
+| CorrectlyRedict     |   redict is correctly	  |
+| ErrorUrl      |already in map use for avoiding duplicate or is not correct url |
+| ErrorPath      |   wrong path  |
+| Nil CrawlUrl      |    the contexts from href and src not match correct link |
+| put      |   put the url into channel |
+| url num is xxx      |    Total number of links  |
+
 #### Finally result
 ```
 Error Link		https://xxxx.abc.com/frombbbbbb
