@@ -58,7 +58,11 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	if resp == nil {
 		return err.Error(), -2, "error"
 	}
-
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	respBody = string(body)
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
@@ -68,25 +72,6 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		lurl := GetUrlFromLocation(*resp)
 
 		respBody, respstatusCode, respContentType = GetFromRedirectUrl(lurl, 1)
-	}
-
-	//如果响应类型为html文件，获取其body
-	if respContentType == "text/html; charset=utf-8" {
-		log.Println("GetForBoby		" + surl)
-		resp, err = http.Get(surl)
-		if err != nil {
-			log.Print(err)
-		}
-		if resp == nil {
-			return err.Error(), -2, "error"
-		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err)
-		}
-		respBody = string(body)
-	} else {
-		respBody = "nohtml"
 	}
 
 	defer resp.Body.Close()
@@ -106,8 +91,8 @@ func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
 		return err.Error(), -2, "error"
 	}
 
-	if resp.StatusCode == 200 {
-		return "redict200nohtml", resp.StatusCode, resp.Header.Get("Content-Type")
+	if resp.StatusCode > 200 && resp.StatusCode < 299 {
+		return "CorrectlyRedict", resp.StatusCode, resp.Header.Get("Content-Type")
 	}
 
 	if resp.StatusCode == 301 || resp.StatusCode == 302 {

@@ -221,7 +221,7 @@ func DomArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 			if cU.CrawlUrl != "" {
 				unitCurl.RefUrl = cU.CrawlUrl
 			} else {
-				log.Print("Nil CrawlUrl!")
+				log.Print("Nil CrawlUrl")
 			}
 
 			//如果拼接符合url正则且不在Map内的的放入channel和Map
@@ -248,6 +248,7 @@ func StatAndCreate(p string) error {
 		if err != nil {
 			log.Fatalln(err)
 		}
+		return nil
 	}
 	return err
 }
@@ -313,10 +314,10 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 
 	for i := 0; i < len(errorArryay); i++ {
 		if errorArryay[i].StatusCode != 0 {
-			resFile.WriteString("错误链接		" + errorArryay[i].CrawlUrl)
-			resFile.WriteString("\n引用链接		" + errorArryay[i].RefUrl)
-			resFile.WriteString(fmt.Sprintf("\n%d\n", errorArryay[i].StatusCode))
-			resFile.WriteString("\n访问报错		" + errorArryay[i].QueryError)
+			resFile.WriteString("Error Link		" + errorArryay[i].CrawlUrl)
+			resFile.WriteString("\nRef Link		" + errorArryay[i].RefUrl)
+			resFile.WriteString(fmt.Sprintf("\nStatusCode	%d\n", errorArryay[i].StatusCode))
+			resFile.WriteString("\nException		" + errorArryay[i].QueryError)
 			resFile.WriteString("\n")
 		}
 	}
