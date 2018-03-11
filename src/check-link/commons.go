@@ -137,7 +137,7 @@ func StitchDomain(s string, h string) string {
 func GetDomainHost(u string) (string, string, error) {
 
 	if !ReIsLink(u) {
-		return "", "", errors.New("不符合链接正则")
+		return "", "", errors.New("the Link not match regex")
 	}
 
 	pu, err := url.Parse(u)

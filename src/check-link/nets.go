@@ -5,9 +5,18 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
+
+var client = http.Client{
+	Timeout: time.Duration(10 * time.Second),
+}
+
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
+
+
+
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
@@ -51,7 +60,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	var respBody string
 
 	log.Println("GET		" + surl)
-	resp, err := http.Get(surl)
+	resp, err := client.Get(surl)
 	if err != nil {
 		log.Print(err)
 	}
