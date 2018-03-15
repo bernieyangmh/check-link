@@ -11,6 +11,7 @@ import (
 
 var client = http.Client{
 	Timeout: time.Duration(10 * time.Second),
+	Transport: &http.Transport{DisableKeepAlives: true},
 }
 
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
@@ -59,19 +60,28 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	var respBody string
 
-	log.Println("GET		" + surl)
-	resp, err := client.Get(surl)
+	log.Println("Head		" + surl)
+	resp, err := client.Head(surl)
 	if err != nil {
 		log.Print(err)
 	}
 	if resp == nil {
 		return err.Error(), -2, "error"
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
+
+	//链接不允许HEAD方法或直接关闭链接，换用Get
+	if resp == nil || resp.StatusCode == 405 {
+		log.Println("GetForNoHead		" + surl)
+		resp, err = http.Get(surl)
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
-	respBody = string(body)
+	if resp == nil {
+		return err.Error(), -2, "error"
+	}
+
 	respstatusCode := resp.StatusCode
 	respContentType := resp.Header.Get("Content-Type")
 
@@ -80,7 +90,30 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 		lurl := GetUrlFromLocation(*resp)
 
-		respBody, respstatusCode, respContentType = GetFromRedirectUrl(lurl, 1)
+		return GetFromRedirectUrl(lurl, 1)
+	}
+
+	//如果响应类型为html文件，获取其body
+	if respContentType == "text/html; charset=utf-8" {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+		} else {
+			if len(body) == 0 {
+				resp, err = client.Get(surl)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+		}
+		log.Println("GetForBoby		" + surl)
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+		}
+		respBody = string(body)
+	} else {
+		respBody = "nohtml"
 	}
 
 	defer resp.Body.Close()

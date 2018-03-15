@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"github.com/PuerkitoBio/goquery"
-	//"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"net/url"
@@ -14,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"sync"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
@@ -248,7 +247,6 @@ func StatAndCreate(p string) error {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		return nil
 	}
 	return err
 }
@@ -275,7 +273,7 @@ func ReadJsonConfig(tm map[string]int) {
 
 }
 
-func LanuchCrawl(rla []string, lp string, rp string) {
+func LanuchCrawl(rla []string, lp string, rp string, wg *sync.WaitGroup) {
 
 	var ROOT_DOMAIN = rla
 
@@ -321,5 +319,6 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 			resFile.WriteString("\n")
 		}
 	}
+	defer wg.Done()
 
 }
