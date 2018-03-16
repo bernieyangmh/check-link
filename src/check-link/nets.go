@@ -8,16 +8,12 @@ import (
 	"time"
 )
 
-
 var client = http.Client{
-	Timeout: time.Duration(10 * time.Second),
+	Timeout:   time.Duration(10 * time.Second),
 	Transport: &http.Transport{DisableKeepAlives: true},
 }
 
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
-
-
-
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
@@ -59,9 +55,14 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
 
 	var respBody string
+	var resp *http.Response
+	var err error
+	var respstatusCode int
+	var respContentType string
+	var body []byte
 
 	log.Println("Head		" + surl)
-	resp, err := client.Head(surl)
+	resp, err = client.Head(surl)
 	if err != nil {
 		log.Print(err)
 	}
@@ -82,8 +83,8 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		return err.Error(), -2, "error"
 	}
 
-	respstatusCode := resp.StatusCode
-	respContentType := resp.Header.Get("Content-Type")
+	respstatusCode = resp.StatusCode
+	respContentType = resp.Header.Get("Content-Type")
 
 	//如果3xx跳转，检查跳转是否正常
 	if 301 == resp.StatusCode || resp.StatusCode == 302 {
@@ -95,22 +96,23 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	//如果响应类型为html文件，获取其body
 	if respContentType == "text/html; charset=utf-8" {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Println(err)
 		} else {
 			if len(body) == 0 {
+				log.Println("GetForBoby		" + surl)
 				resp, err = client.Get(surl)
+				if err != nil {
+					log.Println(err)
+				}
+				body, err = ioutil.ReadAll(resp.Body)
 				if err != nil {
 					log.Println(err)
 				}
 			}
 		}
-		log.Println("GetForBoby		" + surl)
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err)
-		}
+
 		respBody = string(body)
 	} else {
 		respBody = "nohtml"

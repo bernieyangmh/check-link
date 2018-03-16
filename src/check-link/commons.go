@@ -10,9 +10,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
-	"sync"
 )
 
 //输入一个链接，将状态码放进map，能爬取的链接输进管道
