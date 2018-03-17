@@ -60,7 +60,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	var respstatusCode int
 	var respContentType string
 	var body []byte
-
+	//Todo switch
 	log.Println("Head		" + surl)
 	resp, err = client.Head(surl)
 	if err != nil {
@@ -76,6 +76,11 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 		resp, err = http.Get(surl)
 		if err != nil {
 			log.Println(err)
+		} else {
+			body, err = ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 
 	}
@@ -96,16 +101,13 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 	//如果响应类型为html文件，获取其body
 	if respContentType == "text/html; charset=utf-8" {
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err)
-		} else {
-			if len(body) == 0 {
-				log.Println("GetForBoby		" + surl)
-				resp, err = client.Get(surl)
-				if err != nil {
-					log.Println(err)
-				}
+
+		if len(body) == 0 {
+			log.Println("GetForBoby		" + surl)
+			resp, err = client.Get(surl)
+			if err != nil {
+				log.Println(err)
+			} else {
 				body, err = ioutil.ReadAll(resp.Body)
 				if err != nil {
 					log.Println(err)
@@ -115,7 +117,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 		respBody = string(body)
 	} else {
-		respBody = "nohtml"
+		respBody = "NoHtml"
 	}
 
 	defer resp.Body.Close()
