@@ -70,7 +70,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	//链接不允许HEAD方法或直接关闭链接，换用Get
 	if resp == nil || resp.StatusCode == 405 {
 		log.Println("GetForNoHead		" + surl)
-		resp, err = http.Get(surl)
+		resp, err = client.Get(surl)
 		if err != nil {
 			log.Println(err)
 		} else {
