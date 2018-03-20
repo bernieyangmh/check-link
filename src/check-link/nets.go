@@ -105,13 +105,16 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 			if err != nil {
 				log.Println(err)
 			} else {
-				body, err = ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Println(err)
+				if resp == nil {
+					return err.Error(), -2, "error"
+				} else {
+					body, err = ioutil.ReadAll(resp.Body)
+					if err != nil {
+						log.Println(err)
+					}
 				}
 			}
 		}
-
 		respBody = string(body)
 	} else {
 		respBody = "NoHtml"
