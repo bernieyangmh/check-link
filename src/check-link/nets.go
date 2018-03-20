@@ -112,6 +112,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 					if err != nil {
 						log.Println(err)
 					}
+					defer resp.Body.Close()
 				}
 			}
 		}
@@ -119,8 +120,6 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	} else {
 		respBody = "NoHtml"
 	}
-
-	defer resp.Body.Close()
 
 	return respBody, respstatusCode, respContentType
 }
