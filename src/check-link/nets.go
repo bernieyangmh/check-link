@@ -66,9 +66,6 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	if err != nil {
 		log.Print(err)
 	}
-	if resp == nil {
-		return err.Error(), -2, "error"
-	}
 
 	//链接不允许HEAD方法或直接关闭链接，换用Get
 	if resp == nil || resp.StatusCode == 405 {
