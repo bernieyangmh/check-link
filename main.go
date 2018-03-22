@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 )
 
 func main() {
@@ -14,7 +13,6 @@ func main() {
 	var rootLinkArray []string
 	var logPath string
 	var resultPath string
-	var wg sync.WaitGroup
 
 	for i := 0; i < len(os.Args); i++ {
 		switch os.Args[i] {
@@ -50,6 +48,5 @@ func main() {
 	log.SetOutput(stdoutAndFile)
 
 	defer logFile.Close()
-	wg.Wait()
-	check_link.LanuchCrawl(rootLinkArray, logPath, resultPath, &wg)
+	check_link.LanuchCrawl(rootLinkArray, logPath, resultPath)
 }

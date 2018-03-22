@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 )
@@ -273,7 +272,7 @@ func ReadJsonConfig(tm map[string]int) {
 
 }
 
-func LanuchCrawl(rla []string, lp string, rp string, wg *sync.WaitGroup) {
+func LanuchCrawl(rla []string, lp string, rp string) {
 
 	var ROOT_DOMAIN = rla
 
@@ -319,6 +318,5 @@ func LanuchCrawl(rla []string, lp string, rp string, wg *sync.WaitGroup) {
 			resFile.WriteString("\n")
 		}
 	}
-	defer wg.Done()
 
 }
