@@ -158,6 +158,20 @@ func SpaceMap(str string) string {
 	}, str)
 }
 
+//判断字符串是否在列表里
+func stringInStringList(a string, list []string) bool {
+	for _, b := range list {
+		log.Println(a)
+		log.Println(b)
+		log.Println(strings.Contains(a, b))
+		switch strings.Contains(a, b) {
+		case true:
+			return true
+		}
+	}
+	return false
+}
+
 //解析body拿到href链接及文本dom内容
 //func GetHerfFromHtml(s string) []CUrl {
 //	hrefArray := make([]CUrl, 0)
@@ -251,11 +265,12 @@ func StatAndCreate(p string) error {
 }
 
 type ConfigJson struct {
-	WhiteLink []string `json:"WhiteLink"`
+	WhiteLink      []string `json:"WhiteLink"`
+	RestrictDomain []string `json:"RestrictDomain"`
 }
 
 //从配置文件中读取配置项并配置
-func ReadJsonConfig(tm map[string]int) {
+func ReadJsonConfig(tm map[string]int, rdl []string) []string{
 
 	raw, err := ioutil.ReadFile("./config.json")
 	if err != nil {
@@ -269,13 +284,19 @@ func ReadJsonConfig(tm map[string]int) {
 	for i := 0; i < len(c.WhiteLink); i++ {
 		tm[c.WhiteLink[i]] = 1
 	}
+	for i := 0; i < len(c.RestrictDomain); i++ {
+		fmt.Println(c.RestrictDomain[i])
+		rdl = append(rdl, c.RestrictDomain[i])
+
+	}
+	return rdl
 
 }
 
 func LanuchCrawl(rla []string, lp string, rp string) {
 
 	var ROOT_DOMAIN = rla
-
+	var RestrictDomainList []string
 	var executeChannel = make(chan CUrl, 5000)
 	var trailMap = make(map[string]int)
 	var finishArray = make([]CUrl, 0, 10000)
@@ -287,12 +308,12 @@ func LanuchCrawl(rla []string, lp string, rp string) {
 	}
 
 	//读取配置文件
-	ReadJsonConfig(trailMap)
+	RestrictDomainList = ReadJsonConfig(trailMap, RestrictDomainList)
 
 	for len(executeChannel) > 0 {
 		aimUrl := GetChannel(executeChannel)
 		if aimUrl.CrawlUrl != "close" {
-			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay)
+			IterCrawl(aimUrl, trailMap, executeChannel, &finishArray, &errorArryay, RestrictDomainList)
 			fmt.Println(len(executeChannel))
 		}
 	}

@@ -1,6 +1,9 @@
 {
-  "whitelist": [
+  "WhiteLink": [
     "https://www.google.com",
-    "https://www.youtobe.com"
-  ]
-}
+    "https://www.youtube.com"
+  ],
+  "RestrictDomain": [
+    "qiniu.com",
+    "qiniu.com.cn"
+  ]}

@@ -4,16 +4,25 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"time"
 )
 
-var client = http.Client{
-	Timeout:   time.Duration(10 * time.Second),
-	Transport: &http.Transport{DisableKeepAlives: true},
+var netTransport = &http.Transport{
+	Dial: (&net.Dialer{
+		Timeout: 5 * time.Second,
+	}).Dial,
+	TLSHandshakeTimeout: 5 * time.Second,
+	DisableKeepAlives:   true,
 }
 
-func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl) {
+var client = http.Client{
+	Timeout:   time.Duration(10 * time.Second),
+	Transport: netTransport,
+}
+
+func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl, rdl []string) {
 
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
@@ -42,12 +51,15 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 		*eA = append(*eA, cu)
 	}
 
-	//如果链接主域名在爬取列表内，Content-Type为html且不在trailMap内，进入读取
-	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && ReDomainMatch(cu.CrawlUrl) {
+	//链接主域名只有在爬取列表内，Content-Type为html且不在trailMap内，才会进入读取
+	log.Println(rdl)
+	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && stringInStringList(cu.CrawlUrl, rdl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
 		hrefArray, srcArray := ExtractBody(respBody)
 		DomArrayToUrl(cu, hrefArray, cH, tM)
 		ReArrayToUrl(cu, srcArray, cH, tM)
+	}else {
+		log.Println("Not need read body		" + cu.CrawlUrl)
 	}
 }
 
