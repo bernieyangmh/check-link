@@ -35,7 +35,7 @@ func GetChannel(ch chan CUrl) CUrl {
 
 //读取数组内的路径，处理为完整url,如果不在Map里放入ch和map
 func ReArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
-
+	log.Println("test")
 	var unitCurl CUrl
 	for i := 0; i < len(a); i++ {
 		ha := a[i][1]
@@ -169,31 +169,6 @@ func stringInStringList(a string, list []string) bool {
 	return false
 }
 
-//解析body拿到href链接及文本dom内容
-//func GetHerfFromHtml(s string) []CUrl {
-//	hrefArray := make([]CUrl, 0)
-//
-//	node, err := html.Parse(strings.NewReader(s))
-//	if err != nil {
-//		log.Print(err)
-//	}
-//	doc := goquery.NewDocumentFromNode(node)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	// Find the review items
-//	doc.Find("html a").Each(func(index int, item *goquery.Selection) {
-//		linkTag := item
-//		link, _ := linkTag.Attr("href")
-//		linkText := linkTag.Text()
-//		linkText = SpaceMap(linkText)
-//		bbb := CUrl{Origin: link, Context: linkText}
-//		hrefArray = append(hrefArray, bbb)
-//	})
-//	return hrefArray
-//}
-
 func DomArrayToUrl(cU CUrl, a [][]string, cH chan<- CUrl, tM map[string]int) {
 
 	var unitCurl CUrl
@@ -267,7 +242,7 @@ type ConfigJson struct {
 }
 
 //从配置文件中读取配置项并配置
-func ReadJsonConfig(tm map[string]int, rdl []string) []string{
+func ReadJsonConfig(tm map[string]int, rdl []string) []string {
 
 	raw, err := ioutil.ReadFile("./config.json")
 	if err != nil {

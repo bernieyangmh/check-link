@@ -6,8 +6,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"time"
 	"strings"
+	"time"
 )
 
 var netTransport = &http.Transport{
@@ -24,7 +24,7 @@ var client = http.Client{
 }
 
 func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUrl, rdl []string) {
-
+	log.Println("test")
 	s_domain, _, err := GetDomainHost(cu.CrawlUrl)
 	if err != nil {
 		log.Println(err)
@@ -58,14 +58,14 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 		hrefArray, srcArray := ExtractBody(respBody)
 		DomArrayToUrl(cu, hrefArray, cH, tM)
 		ReArrayToUrl(cu, srcArray, cH, tM)
-	}else {
+	} else {
 		log.Println("Not need read body		" + cu.CrawlUrl)
 	}
 }
 
 //获取链接的body，状态码，contentType
 func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentType string) {
-
+	log.Println("test")
 	var respBody string
 	var resp *http.Response
 	var err error
@@ -120,6 +120,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 				if resp == nil {
 					return err.Error(), -2, "error"
 				} else {
+					log.Println("test")
 					body, err = ioutil.ReadAll(resp.Body)
 					if err != nil {
 						log.Println(err)
@@ -138,7 +139,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 
 //检查重定向是否正确
 func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
-
+	log.Println("test")
 	resp, err := http.Head(lu)
 	if err != nil {
 		log.Println(err)
@@ -166,6 +167,7 @@ func GetFromRedirectUrl(lu string, rn int) (string, int, string) {
 }
 
 func GetUrlFromLocation(resp http.Response) string {
+	log.Println("test")
 	var lurl string
 	if ReIsLink(resp.Header.Get("Location")) {
 		lurl = resp.Header.Get("Location")
