@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"strings"
 )
 
 var netTransport = &http.Transport{
@@ -52,8 +53,7 @@ func IterCrawl(cu CUrl, tM map[string]int, cH chan<- CUrl, fA *[]CUrl, eA *[]CUr
 	}
 
 	//链接主域名只有在爬取列表内，Content-Type为html且不在trailMap内，才会进入读取
-	log.Println(rdl)
-	if (ContentType == "text/html; charset=utf-8") && (tM[cu.CrawlUrl] != 0) && stringInStringList(cu.CrawlUrl, rdl) {
+	if (strings.Contains("text/html; charset=utf-8", ContentType)) && (tM[cu.CrawlUrl] != 0) && stringInStringList(cu.CrawlUrl, rdl) {
 		log.Println("aimUrl		" + cu.CrawlUrl)
 		hrefArray, srcArray := ExtractBody(respBody)
 		DomArrayToUrl(cu, hrefArray, cH, tM)
@@ -109,7 +109,7 @@ func Crawling(surl string) (ResponseBodyString string, StatusCode int, ContentTy
 	}
 
 	//如果响应类型为html文件，获取其body
-	if respContentType == "text/html; charset=utf-8" {
+	if strings.Contains("text/html; charset=utf-8", ContentType) {
 
 		if len(body) == 0 {
 			log.Println("GetForBoby		" + surl)

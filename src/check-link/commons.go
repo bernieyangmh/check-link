@@ -161,9 +161,6 @@ func SpaceMap(str string) string {
 //判断字符串是否在列表里
 func stringInStringList(a string, list []string) bool {
 	for _, b := range list {
-		log.Println(a)
-		log.Println(b)
-		log.Println(strings.Contains(a, b))
 		switch strings.Contains(a, b) {
 		case true:
 			return true
@@ -285,7 +282,6 @@ func ReadJsonConfig(tm map[string]int, rdl []string) []string{
 		tm[c.WhiteLink[i]] = 1
 	}
 	for i := 0; i < len(c.RestrictDomain); i++ {
-		fmt.Println(c.RestrictDomain[i])
 		rdl = append(rdl, c.RestrictDomain[i])
 
 	}
